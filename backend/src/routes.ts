@@ -176,7 +176,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       `select c.id, c.text, c.created_at, c.author_wallet, u.username from comments c join users u on u.wallet = c.author_wallet where c.post_id = $1 order by c.created_at asc`,
       [params.id]
     );
-    return { ...mapPost(result.rows[0]), comments: comments.rows.map((row) => ({ id: row.id, text: row.text, createdAt: row.created_at, author: { wallet: row.author_wallet, username: row.username } })) };
+    return { ...mapPost(result.rows[0]), comments: comments.rows.map((row: Record<string, any>) => ({ id: row.id, text: row.text, createdAt: row.created_at, author: { wallet: row.author_wallet, username: row.username } })) };
   });
 
   app.post("/posts/:id/like", async (request, reply) => {
