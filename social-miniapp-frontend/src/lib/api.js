@@ -51,3 +51,16 @@ export function updateProfile(token, { username, bio, avatarUrl }) {
     body: JSON.stringify({ username, bio, avatarUrl }),
   })
 }
+
+
+export function getFeed(cursor) {
+  const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''
+  return request(`/feed${query}`)
+}
+
+export function createPost(token, text) {
+  return authedRequest('/posts', token, {
+    method: 'POST',
+    body: JSON.stringify({ text }),
+  })
+}
