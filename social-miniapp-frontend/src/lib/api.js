@@ -1,0 +1,42 @@
+const API_BASE = 'https://nimsoc.onrender.com/api'
+
+async function request(path, options = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+  })
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '')
+    throw new Error(`API error ${res.status}: ${errText}`)
+  }
+
+  return res.json()
+}
+
+export function getChallenge(wallet) {
+  return request('/auth/challenge', {
+    method: 'POST',
+    body: JSON.stringify({ wallet }),
+  })
+}
+
+export function verifyAuth({ wallet, publicKey, signature }) {
+  return request('/auth/verify', {
+    method: 'POST',
+    body: JSON.stringify({ wallet, publicKey, signature }),
+  })
+}
+
+export function authedRequest(path, token, options = {}) {
+  return request(path, {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      Authorization: `Bearer ${token}`,
+    },
+  })
+}

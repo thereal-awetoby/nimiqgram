@@ -4,6 +4,7 @@ import Feed from './pages/Feed'
 import Profile from './pages/Profile'
 import Leaderboard from './pages/Leaderboard'
 import Notifications from './pages/Notifications'
+import WalletConnect from './components/WalletConnect'
 
 function App() {
   const [theme, setTheme] = useState(() => {
@@ -18,9 +19,14 @@ function App() {
   function toggleTheme() {
     setTheme(prev => (prev === 'light' ? 'dark' : 'light'))
   }
+  
 
   return (
     <BrowserRouter>
+      <div style={{ padding: 16 }}>
+        <WalletConnect />
+      </div>
+
       <div style={{ padding: 16, textAlign: 'right' }}>
         <button onClick={toggleTheme}>
           Switch to {theme === 'light' ? 'dark' : 'light'} mode
