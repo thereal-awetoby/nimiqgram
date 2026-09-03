@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: nimqpay-backend
+    env: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: 3001
+      - key: CORS_ORIGIN
+        value: http://localhost:3000
+      - key: DATABASE_URL
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: NIMIQ_NETWORK
+        value: testnet
+      - key: NIMIQ_RPC_URL
+        value: https://rpc.nimiq.watch
