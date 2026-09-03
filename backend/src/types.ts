@@ -1,0 +1,20 @@
+export type TipStatus = "pending" | "verified" | "failed";
+
+export type User = {
+  wallet: string;
+  username: string | null;
+  bio: string;
+  avatarUrl: string | null;
+  badges: string[];
+  streak: number;
+};
+
+export type Post = {
+  id: string;
+  author: User;
+  text: string;
+  likeCount: number;
+  commentCount: number;
+  tipTotal: string;
+  createdAt: string;
+};
