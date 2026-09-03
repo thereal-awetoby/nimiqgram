@@ -40,3 +40,14 @@ export function authedRequest(path, token, options = {}) {
     },
   })
 }
+
+export function getProfile(wallet) {
+  return request(`/profile/${wallet}`)
+}
+
+export function updateProfile(token, { username, bio, avatarUrl }) {
+  return authedRequest('/profile', token, {
+    method: 'PUT',
+    body: JSON.stringify({ username, bio, avatarUrl }),
+  })
+}
