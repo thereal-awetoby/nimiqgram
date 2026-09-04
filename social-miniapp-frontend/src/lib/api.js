@@ -88,3 +88,7 @@ export function sendTip(token, { toWallet, postId, amount, txHash }) {
     body: JSON.stringify({ toWallet, postId, amount, txHash }),
   })
 }
+
+export function getLeaderboard(range = 'daily') {
+  return request(`/tips/leaderboard?range=${range}`)
+}
