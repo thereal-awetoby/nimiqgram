@@ -13,6 +13,8 @@ create table if not exists posts (
   id uuid primary key default gen_random_uuid(),
   author_wallet text not null references users(wallet),
   text text not null check (char_length(text) between 1 and 5000),
+  media_url text,
+  media_type text,
   created_at timestamptz not null default now()
 );
 

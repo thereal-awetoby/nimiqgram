@@ -19,9 +19,13 @@ For local development, `signature: "dev:<wallet>"` is accepted. It is rejected i
 | POST | `/auth/verify` | `{ wallet, publicKey?, signature }` -> `{ token, user }`; production verifies with Nimiq RPC |
 | GET | `/profile/:wallet` | `{ username, bio, avatarUrl, badges[], streak }` |
 | PUT | `/profile` | `{ username, bio, avatarUrl? }` (Bearer auth) |
-| GET | `/feed?cursor=` | `{ posts[], nextCursor }`; pass the previous `nextCursor` to load more |
-| POST | `/posts` | `{ text }` (Bearer auth) |
+| GET | `/feed?cursor=` | `{ posts[], nextCursor }`; posts include optional `mediaUrl` and `mediaType`; pass the previous `nextCursor` to load more |
+| POST | `/posts` | `{ text, mediaUrl?, mediaType? }`; media fields must be supplied together (Bearer auth) |
 | GET | `/posts/:id` | Post with comments |
+| GET | `/users/:wallet/following` | `{ users[] }`; people followed by the wallet |
+| GET | `/users/:wallet/followers` | `{ users[] }`; people following the wallet |
+| POST | `/users/:wallet/follow` | Follow the user (Bearer auth) |
+| DELETE | `/users/:wallet/follow` | Unfollow the user (Bearer auth) |
 | POST | `/posts/:id/like` | Toggle like; returns `{ liked, likeCount }` (Bearer auth) |
 | POST | `/posts/:id/comment` | `{ text }`; returns created comment (Bearer auth) |
 | POST | `/tips` | `{ toWallet, postId?, amount, txHash }`; `201` verified or `202` pending (Bearer auth) |

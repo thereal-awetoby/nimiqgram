@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import "dotenv/config";
 import pg from "pg";
 
@@ -7,11 +7,16 @@ if (!databaseUrl) {
   throw new Error("DATABASE_URL is required. Check backend/.env.");
 }
 
-const sql = await readFile(new URL("../sql/001_initial_schema.sql", import.meta.url), "utf8");
+const migrationDirectory = new URL("../sql/", import.meta.url);
+const migrationFiles = (await readdir(migrationDirectory))
+  .filter((file) => /^\d+_.+\.sql$/.test(file))
+  .sort();
 const pool = new pg.Pool({ connectionString: databaseUrl });
 
 try {
-  await pool.query(sql);
+  for (const file of migrationFiles) {
+    await pool.query(await readFile(new URL(file, migrationDirectory), "utf8"));
+  }
   console.log("Database migration applied successfully.");
 } finally {
   await pool.end();

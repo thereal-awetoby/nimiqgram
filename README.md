@@ -143,13 +143,28 @@ POST /api/posts/:id/like
 POST /api/posts/:id/comment
 ```
 
-Example post payload:
+Example post payload with optional Cloudinary media:
 
 ```json
 {
-  "text": "Launching a new creator wallet experience"
+  "text": "Launching a new creator wallet experience",
+  "mediaUrl": "https://res.cloudinary.com/example/image/upload/post.png",
+  "mediaType": "image/png"
 }
 ```
+
+`mediaUrl` and `mediaType` are optional, but must be supplied together. The API stores the Cloudinary URL and MIME type and returns them on every post in the feed and on post details.
+
+### Following
+
+```http
+GET /api/users/:wallet/following
+GET /api/users/:wallet/followers
+POST /api/users/:wallet/follow
+DELETE /api/users/:wallet/follow
+```
+
+The list endpoints return `{ "users": [] }`. Follow and unfollow require the authenticated wallet's bearer token. A wallet cannot follow itself.
 
 ### Tips and notifications
 

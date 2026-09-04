@@ -7,7 +7,13 @@ import { verifyTipTransaction } from "./nimiq-rpc.js";
 const walletSchema = z.object({ wallet: z.string().min(1).max(128) });
 const verifySchema = walletSchema.extend({ signature: z.string().min(1), publicKey: z.string().min(1).optional() });
 const profileSchema = z.object({ username: z.string().trim().min(1).max(32), bio: z.string().max(280), avatarUrl: z.string().url().nullable().optional() });
-const postSchema = z.object({ text: z.string().trim().min(1).max(5000) });
+const postSchema = z.object({
+  text: z.string().trim().min(1).max(5000),
+  mediaUrl: z.string().url().max(2048).nullable().optional(),
+  mediaType: z.string().trim().min(1).max(128).nullable().optional()
+}).refine((post) => Boolean(post.mediaUrl) === Boolean(post.mediaType), {
+  message: "mediaUrl and mediaType must be provided together"
+});
 const commentSchema = z.object({ text: z.string().trim().min(1).max(1000) });
 const tipSchema = z.object({ toWallet: walletSchema.shape.wallet, postId: z.string().uuid().optional(), amount: z.coerce.number().positive(), txHash: z.string().min(1).max(256) });
 const notificationReadSchema = z.object({ ids: z.array(z.string().uuid()).optional() });
@@ -25,6 +31,8 @@ function mapPost(row: Record<string, any>) {
   return {
     id: row.id,
     text: row.text,
+    mediaUrl: row.media_url,
+    mediaType: row.media_type,
     createdAt: row.created_at,
     author: {
       wallet: row.author_wallet,
@@ -112,6 +120,50 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     return { wallet: row.wallet, username: row.username, bio: row.bio, avatarUrl: row.avatar_url, badges: row.badges, streak: row.streak };
   });
 
+  app.get("/users/:wallet/following", async (request, reply) => {
+    const params = request.params as { wallet: string };
+    const result = await pool.query(
+      `select u.wallet, u.username, u.bio, u.avatar_url
+       from follows f join users u on u.wallet = f.followed_wallet
+       where f.follower_wallet = $1 order by f.created_at desc`,
+      [params.wallet]
+    );
+    return { users: result.rows.map((row: Record<string, any>) => ({ wallet: row.wallet, username: row.username, bio: row.bio, avatarUrl: row.avatar_url })) };
+  });
+
+  app.get("/users/:wallet/followers", async (request, reply) => {
+    const params = request.params as { wallet: string };
+    const result = await pool.query(
+      `select u.wallet, u.username, u.bio, u.avatar_url
+       from follows f join users u on u.wallet = f.follower_wallet
+       where f.followed_wallet = $1 order by f.created_at desc`,
+      [params.wallet]
+    );
+    return { users: result.rows.map((row: Record<string, any>) => ({ wallet: row.wallet, username: row.username, bio: row.bio, avatarUrl: row.avatar_url })) };
+  });
+
+  app.post("/users/:wallet/follow", async (request, reply) => {
+    const session = getSession(request);
+    if (!session) return reply.unauthorized();
+    const params = request.params as { wallet: string };
+    if (params.wallet === session.wallet) return reply.badRequest("cannot follow yourself");
+    const user = await pool.query(`select wallet from users where wallet = $1`, [params.wallet]);
+    if (user.rowCount === 0) return reply.notFound("user not found");
+    await pool.query(
+      `insert into follows (follower_wallet, followed_wallet) values ($1, $2) on conflict do nothing`,
+      [session.wallet, params.wallet]
+    );
+    return { following: true, wallet: params.wallet };
+  });
+
+  app.delete("/users/:wallet/follow", async (request, reply) => {
+    const session = getSession(request);
+    if (!session) return reply.unauthorized();
+    const params = request.params as { wallet: string };
+    await pool.query(`delete from follows where follower_wallet = $1 and followed_wallet = $2`, [session.wallet, params.wallet]);
+    return { following: false, wallet: params.wallet };
+  });
+
   app.put("/profile", async (request, reply) => {
     const session = getSession(request);
     if (!session) return reply.unauthorized();
@@ -129,7 +181,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     const query = request.query as { cursor?: string };
     const cursor = query.cursor ? new Date(query.cursor) : new Date();
     const result = await pool.query(
-      `select p.id, p.text, p.created_at, u.wallet as author_wallet, u.username,
+      `select p.id, p.text, p.media_url, p.media_type, p.created_at, u.wallet as author_wallet, u.username,
               u.bio, u.avatar_url,
               count(distinct l.wallet)::int as like_count,
               count(distinct c.id)::int as comment_count,
@@ -153,17 +205,17 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     const body = postSchema.safeParse(request.body);
     if (!body.success) return reply.code(400).send({ error: body.error.flatten() });
     const result = await pool.query(
-      `insert into posts (author_wallet, text) values ($1, $2) returning id, text, created_at`,
-      [session.wallet, body.data.text]
+      `insert into posts (author_wallet, text, media_url, media_type) values ($1, $2, $3, $4) returning id, text, media_url, media_type, created_at`,
+      [session.wallet, body.data.text, body.data.mediaUrl ?? null, body.data.mediaType ?? null]
     );
     await recordActivity(session.wallet);
-    return reply.code(201).send({ id: result.rows[0].id, text: result.rows[0].text, createdAt: result.rows[0].created_at });
+    return reply.code(201).send({ id: result.rows[0].id, text: result.rows[0].text, mediaUrl: result.rows[0].media_url, mediaType: result.rows[0].media_type, createdAt: result.rows[0].created_at });
   });
 
   app.get("/posts/:id", async (request, reply) => {
     const params = request.params as { id: string };
     const result = await pool.query(
-      `select p.id, p.text, p.created_at, u.wallet as author_wallet, u.username, u.bio, u.avatar_url,
+      `select p.id, p.text, p.media_url, p.media_type, p.created_at, u.wallet as author_wallet, u.username, u.bio, u.avatar_url,
               count(distinct l.wallet)::int as like_count, count(distinct c.id)::int as comment_count,
               coalesce(sum(t.amount_nim) filter (where t.status = 'verified'), 0)::text as tip_total
        from posts p join users u on u.wallet = p.author_wallet

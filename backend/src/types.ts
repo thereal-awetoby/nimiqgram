@@ -13,6 +13,8 @@ export type Post = {
   id: string;
   author: User;
   text: string;
+  mediaUrl: string | null;
+  mediaType: string | null;
   likeCount: number;
   commentCount: number;
   tipTotal: string;
