@@ -5,12 +5,11 @@ import { getFeed, createPost, toggleLike, addComment, getPost } from '../lib/api
 function Feed() {
   const { token, isLoggedIn } = useAuth()
   const [posts, setPosts] = useState([])
+  const [likedMap, setLikedMap] = useState({}) // { [postId]: true/false } — tracks whether THIS session has liked it
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(true)
   const [posting, setPosting] = useState(false)
   const [error, setError] = useState(null)
-
-  // Tracks expanded comment sections per post: { [postId]: { open, loading, comments, draft, submitting } }
   const [commentState, setCommentState] = useState({})
 
   async function loadFeed() {
@@ -50,11 +49,13 @@ function Feed() {
     if (!isLoggedIn) return
     try {
       const result = await toggleLike(token, postId)
+      console.log('LIKE RESULT:', result) // TEMP debug
       setPosts((prev) =>
         prev.map((p) => (p.id === postId ? { ...p, likeCount: result.likeCount } : p))
       )
+      setLikedMap((prev) => ({ ...prev, [postId]: result.liked }))
     } catch (err) {
-      console.error(err)
+      console.error('LIKE ERROR:', err) // TEMP debug
     }
   }
 
@@ -73,6 +74,7 @@ function Feed() {
 
     try {
       const post = await getPost(postId)
+      console.log('POST DETAIL:', post) // TEMP debug
       setCommentState((prev) => ({
         ...prev,
         [postId]: { open: true, loading: false, comments: post.comments || [], draft: '', submitting: false },
@@ -153,19 +155,31 @@ function Feed() {
       ) : (
         posts.map((post) => {
           const cState = commentState[post.id]
+          const isLiked = likedMap[post.id]
           return (
             <div key={post.id} style={{ borderBottom: '1px solid var(--nav-border)', padding: '12px 0' }}>
               <strong>{post.author?.username || post.author?.wallet}</strong>
               <p>{post.text}</p>
 
-              <div style={{ display: 'flex', gap: 16 }}>
-                <button onClick={() => handleLike(post.id)} disabled={!isLoggedIn}>
-                  ❤ {post.likeCount}
+              <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                <button
+                  onClick={() => handleLike(post.id)}
+                  disabled={!isLoggedIn}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid var(--nav-border)',
+                    borderRadius: 6,
+                    padding: '4px 10px',
+                    color: isLiked ? '#e0245e' : 'var(--text-color)',
+                    cursor: isLoggedIn ? 'pointer' : 'default',
+                  }}
+                >
+                  {isLiked ? '♥' : '♡'} {post.likeCount}
                 </button>
                 <button onClick={() => toggleComments(post.id)}>
                   💬 {post.commentCount} {cState?.open ? '(hide)' : ''}
                 </button>
-                <span style={{ opacity: 0.6 }}>💰 {post.tipTotal} tipped</span>
+                <span style={{ opacity: 0.6 }}>$ {post.tipTotal} tipped</span>
               </div>
 
               {cState?.open && (
@@ -177,7 +191,7 @@ function Feed() {
                   ) : (
                     cState.comments.map((c, i) => (
                       <div key={c.id || i} style={{ marginBottom: 8 }}>
-                        <strong>{c.author?.username || c.author?.wallet}</strong>: {c.text}
+                        <strong>{c.author?.username || c.author?.wallet || 'unknown'}</strong>: {c.text}
                       </div>
                     ))
                   )}
