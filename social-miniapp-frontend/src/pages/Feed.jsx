@@ -49,13 +49,12 @@ function Feed() {
     if (!isLoggedIn) return
     try {
       const result = await toggleLike(token, postId)
-      console.log('LIKE RESULT:', result) // TEMP debug
       setPosts((prev) =>
         prev.map((p) => (p.id === postId ? { ...p, likeCount: result.likeCount } : p))
       )
       setLikedMap((prev) => ({ ...prev, [postId]: result.liked }))
     } catch (err) {
-      console.error('LIKE ERROR:', err) // TEMP debug
+      
     }
   }
 

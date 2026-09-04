@@ -68,6 +68,7 @@ export function createPost(token, text) {
 export function toggleLike(token, postId) {
   return authedRequest(`/posts/${postId}/like`, token, {
     method: 'POST',
+    body: JSON.stringify({}),
   })
 }
 
