@@ -52,17 +52,20 @@ export function updateProfile(token, { username, bio, avatarUrl }) {
   })
 }
 
-
 export function getFeed(cursor) {
   const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''
   return request(`/feed${query}`)
 }
 
-export function createPost(token, text) {
+export function createPost(token, { text, mediaUrl, mediaType }) {
   return authedRequest('/posts', token, {
     method: 'POST',
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text, mediaUrl, mediaType }),
   })
+}
+
+export function getPost(postId) {
+  return request(`/posts/${postId}`)
 }
 
 export function toggleLike(token, postId) {
@@ -77,10 +80,6 @@ export function addComment(token, postId, text) {
     method: 'POST',
     body: JSON.stringify({ text }),
   })
-}
-
-export function getPost(postId) {
-  return request(`/posts/${postId}`)
 }
 
 export function sendTip(token, { toWallet, postId, amount, txHash }) {

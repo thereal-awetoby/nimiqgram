@@ -1,7 +1,25 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { getFeed, createPost, toggleLike, addComment, getPost } from '../lib/api'
+import { uploadMedia, getMediaType } from '../lib/upload'
 import TipModal from '../components/TipModal'
+
+const MAX_VIDEO_SECONDS = 5 * 60 // 5 minutes
+const URL_REGEX = /(https?:\/\/[^\s]+)/g
+
+// Turns plain text into text + clickable links, splitting on URLs
+function renderTextWithLinks(text) {
+  const parts = text.split(URL_REGEX)
+  return parts.map((part, i) =>
+    URL_REGEX.test(part) ? (
+      <a key={i} href={part} target="_blank" rel="noopener noreferrer">
+        {part}
+      </a>
+    ) : (
+      <span key={i}>{part}</span>
+    )
+  )
+}
 
 function Feed() {
   const { token, isLoggedIn } = useAuth()
@@ -13,6 +31,13 @@ function Feed() {
   const [error, setError] = useState(null)
   const [commentState, setCommentState] = useState({})
   const [tippingPost, setTippingPost] = useState(null)
+
+  // Media attach state
+  const [mediaFile, setMediaFile] = useState(null)
+  const [mediaPreview, setMediaPreview] = useState(null)
+  const [mediaType, setMediaType] = useState(null)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef(null)
 
   async function loadFeed() {
     setLoading(true)
@@ -31,17 +56,72 @@ function Feed() {
     loadFeed()
   }, [])
 
+  function handleFileSelect(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const type = getMediaType(file)
+    if (!type) {
+      setError('Unsupported file type. Use an image, GIF, or video.')
+      return
+    }
+
+    if (type === 'video') {
+      // Check duration client-side before uploading
+      const videoEl = document.createElement('video')
+      videoEl.preload = 'metadata'
+      videoEl.onloadedmetadata = () => {
+        window.URL.revokeObjectURL(videoEl.src)
+        if (videoEl.duration > MAX_VIDEO_SECONDS) {
+          setError('Video must be 5 minutes or shorter.')
+          return
+        }
+        setMediaFile(file)
+        setMediaType(type)
+        setMediaPreview(URL.createObjectURL(file))
+        setError(null)
+      }
+      videoEl.src = URL.createObjectURL(file)
+    } else {
+      setMediaFile(file)
+      setMediaType(type)
+      setMediaPreview(URL.createObjectURL(file))
+      setError(null)
+    }
+  }
+
+  function clearMedia() {
+    setMediaFile(null)
+    setMediaPreview(null)
+    setMediaType(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
   async function handlePost() {
-    if (!text.trim()) return
+    if (!text.trim() && !mediaFile) return
     setPosting(true)
     setError(null)
+
     try {
-      await createPost(token, text)
+      let mediaUrl = null
+      let finalMediaType = null
+
+      if (mediaFile) {
+        setUploading(true)
+        const uploaded = await uploadMedia(mediaFile)
+        mediaUrl = uploaded.url
+        finalMediaType = mediaType
+        setUploading(false)
+      }
+
+      await createPost(token, { text, mediaUrl, mediaType: finalMediaType })
       setText('')
+      clearMedia()
       await loadFeed()
     } catch (err) {
       console.error(err)
       setError(err.message)
+      setUploading(false)
     } finally {
       setPosting(false)
     }
@@ -134,13 +214,42 @@ function Feed() {
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="What's happening?"
+            placeholder="What's happening? (emoji work fine — just type or use your device's emoji keyboard)"
             style={{ width: '100%', minHeight: 60 }}
           />
-          <br />
-          <button onClick={handlePost} disabled={posting || !text.trim()}>
-            {posting ? 'Posting...' : 'Post'}
-          </button>
+
+          {mediaPreview && (
+            <div style={{ marginTop: 8, position: 'relative', display: 'inline-block' }}>
+              {mediaType === 'video' ? (
+                <video src={mediaPreview} controls style={{ maxWidth: 240, maxHeight: 240 }} />
+              ) : (
+                <img src={mediaPreview} alt="preview" style={{ maxWidth: 240, maxHeight: 240 }} />
+              )}
+              <button onClick={clearMedia} style={{ display: 'block', marginTop: 4 }}>
+                Remove
+              </button>
+            </div>
+          )}
+
+          <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,video/*"
+              onChange={handleFileSelect}
+              style={{ display: 'none' }}
+              id="media-input"
+            />
+            <button onClick={() => fileInputRef.current?.click()} type="button">
+              📎 Attach image/gif/video
+            </button>
+            <button
+              onClick={handlePost}
+              disabled={posting || (!text.trim() && !mediaFile)}
+            >
+              {uploading ? 'Uploading media...' : posting ? 'Posting...' : 'Post'}
+            </button>
+          </div>
         </div>
       ) : (
         <p>Connect your wallet to post.</p>
@@ -159,7 +268,17 @@ function Feed() {
           return (
             <div key={post.id} style={{ borderBottom: '1px solid var(--nav-border)', padding: '12px 0' }}>
               <strong>{post.author?.username || post.author?.wallet}</strong>
-              <p>{post.text}</p>
+              <p>{renderTextWithLinks(post.text || '')}</p>
+
+              {post.mediaUrl && (
+                <div style={{ marginBottom: 8 }}>
+                  {post.mediaType === 'video' ? (
+                    <video src={post.mediaUrl} controls style={{ maxWidth: '100%', maxHeight: 400 }} />
+                  ) : (
+                    <img src={post.mediaUrl} alt="" style={{ maxWidth: '100%', maxHeight: 400 }} />
+                  )}
+                </div>
+              )}
 
               <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
                 <button
