@@ -14,6 +14,7 @@ function Feed() {
     setLoading(true)
     try {
       const data = await getFeed()
+      console.log('FEED DATA:', data)
       setPosts(data.posts || [])
     } catch (err) {
       console.error(err)
