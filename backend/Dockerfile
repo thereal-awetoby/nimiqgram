@@ -13,4 +13,4 @@ ENV PORT=3001
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "npm run migrate && npm run start"]
+CMD ["npm", "run", "start"]
