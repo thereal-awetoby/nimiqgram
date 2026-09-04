@@ -92,3 +92,14 @@ export function sendTip(token, { toWallet, postId, amount, txHash }) {
 export function getLeaderboard(range = 'daily') {
   return request(`/tips/leaderboard?range=${range}`)
 }
+
+export function getNotifications(token) {
+  return authedRequest('/notifications', token)
+}
+
+export function markNotificationsRead(token, ids) {
+  return authedRequest('/notifications/read', token, {
+    method: 'POST',
+    body: JSON.stringify(ids ? { ids } : {}),
+  })
+}
