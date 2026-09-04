@@ -82,3 +82,10 @@ export function addComment(token, postId, text) {
 export function getPost(postId) {
   return request(`/posts/${postId}`)
 }
+
+export function sendTip(token, { toWallet, postId, amount, txHash }) {
+  return authedRequest('/tips', token, {
+    method: 'POST',
+    body: JSON.stringify({ toWallet, postId, amount, txHash }),
+  })
+}

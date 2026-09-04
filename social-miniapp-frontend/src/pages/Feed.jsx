@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { getFeed, createPost, toggleLike, addComment, getPost } from '../lib/api'
+import TipModal from '../components/TipModal'
 
 function Feed() {
   const { token, isLoggedIn } = useAuth()
   const [posts, setPosts] = useState([])
-  const [likedMap, setLikedMap] = useState({}) // { [postId]: true/false } — tracks whether THIS session has liked it
+  const [likedMap, setLikedMap] = useState({})
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(true)
   const [posting, setPosting] = useState(false)
   const [error, setError] = useState(null)
   const [commentState, setCommentState] = useState({})
+  const [tippingPost, setTippingPost] = useState(null)
 
   async function loadFeed() {
     setLoading(true)
@@ -54,7 +56,7 @@ function Feed() {
       )
       setLikedMap((prev) => ({ ...prev, [postId]: result.liked }))
     } catch (err) {
-      
+      console.error(err)
     }
   }
 
@@ -73,7 +75,6 @@ function Feed() {
 
     try {
       const post = await getPost(postId)
-      console.log('POST DETAIL:', post) // TEMP debug
       setCommentState((prev) => ({
         ...prev,
         [postId]: { open: true, loading: false, comments: post.comments || [], draft: '', submitting: false },
@@ -178,7 +179,9 @@ function Feed() {
                 <button onClick={() => toggleComments(post.id)}>
                   💬 {post.commentCount} {cState?.open ? '(hide)' : ''}
                 </button>
-                <span style={{ opacity: 0.6 }}>$ {post.tipTotal} tipped</span>
+                <button onClick={() => setTippingPost(post)} disabled={!isLoggedIn}>
+                  $ Tip ({post.tipTotal})
+                </button>
               </div>
 
               {cState?.open && (
@@ -215,6 +218,17 @@ function Feed() {
             </div>
           )
         })
+      )}
+
+      {tippingPost && (
+        <TipModal
+          post={tippingPost}
+          onClose={() => setTippingPost(null)}
+          onSuccess={() => {
+            setTippingPost(null)
+            loadFeed()
+          }}
+        />
       )}
     </div>
   )
