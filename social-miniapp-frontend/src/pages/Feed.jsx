@@ -14,7 +14,6 @@ function Feed() {
     setLoading(true)
     try {
       const data = await getFeed()
-      console.log('FEED DATA:', data)
       setPosts(data.posts || [])
     } catch (err) {
       console.error(err)
@@ -71,10 +70,13 @@ function Feed() {
         <p>No posts yet — be the first!</p>
       ) : (
         posts.map((post) => (
-          <div key={post.id} style={{ borderBottom: '1px solid var(--nav-border)', padding: '12px 0' }}>
-            <strong>{post.username || post.wallet}</strong>
-            <p>{post.text}</p>
-          </div>
+            <div key={post.id} style={{ borderBottom: '1px solid var(--nav-border)', padding: '12px 0' }}>
+                <strong>{post.author?.username || post.author?.wallet}</strong>
+                <p>{post.text}</p>
+                <small style={{ opacity: 0.6 }}>
+                    {post.likeCount} likes · {post.commentCount} comments · {post.tipTotal} tipped
+                </small>
+            </div>
         ))
       )}
     </div>
