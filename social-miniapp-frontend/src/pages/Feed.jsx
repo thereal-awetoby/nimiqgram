@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { getFeed, createPost } from '../lib/api'
+import { getFeed, createPost, toggleLike, addComment, getPost } from '../lib/api'
 
 function Feed() {
   const { token, isLoggedIn } = useAuth()
@@ -9,6 +9,9 @@ function Feed() {
   const [loading, setLoading] = useState(true)
   const [posting, setPosting] = useState(false)
   const [error, setError] = useState(null)
+
+  // Tracks expanded comment sections per post: { [postId]: { open, loading, comments, draft, submitting } }
+  const [commentState, setCommentState] = useState({})
 
   async function loadFeed() {
     setLoading(true)
@@ -43,6 +46,85 @@ function Feed() {
     }
   }
 
+  async function handleLike(postId) {
+    if (!isLoggedIn) return
+    try {
+      const result = await toggleLike(token, postId)
+      setPosts((prev) =>
+        prev.map((p) => (p.id === postId ? { ...p, likeCount: result.likeCount } : p))
+      )
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  async function toggleComments(postId) {
+    const current = commentState[postId]
+
+    if (current?.open) {
+      setCommentState((prev) => ({ ...prev, [postId]: { ...current, open: false } }))
+      return
+    }
+
+    setCommentState((prev) => ({
+      ...prev,
+      [postId]: { open: true, loading: true, comments: [], draft: '', submitting: false },
+    }))
+
+    try {
+      const post = await getPost(postId)
+      setCommentState((prev) => ({
+        ...prev,
+        [postId]: { open: true, loading: false, comments: post.comments || [], draft: '', submitting: false },
+      }))
+    } catch (err) {
+      console.error(err)
+      setCommentState((prev) => ({
+        ...prev,
+        [postId]: { open: true, loading: false, comments: [], draft: '', submitting: false },
+      }))
+    }
+  }
+
+  function setDraft(postId, value) {
+    setCommentState((prev) => ({
+      ...prev,
+      [postId]: { ...prev[postId], draft: value },
+    }))
+  }
+
+  async function submitComment(postId) {
+    const draft = commentState[postId]?.draft?.trim()
+    if (!draft) return
+
+    setCommentState((prev) => ({
+      ...prev,
+      [postId]: { ...prev[postId], submitting: true },
+    }))
+
+    try {
+      const newComment = await addComment(token, postId, draft)
+      setCommentState((prev) => ({
+        ...prev,
+        [postId]: {
+          ...prev[postId],
+          comments: [...(prev[postId]?.comments || []), newComment],
+          draft: '',
+          submitting: false,
+        },
+      }))
+      setPosts((prev) =>
+        prev.map((p) => (p.id === postId ? { ...p, commentCount: (p.commentCount || 0) + 1 } : p))
+      )
+    } catch (err) {
+      console.error(err)
+      setCommentState((prev) => ({
+        ...prev,
+        [postId]: { ...prev[postId], submitting: false },
+      }))
+    }
+  }
+
   return (
     <div style={{ padding: 16 }}>
       {isLoggedIn ? (
@@ -69,15 +151,57 @@ function Feed() {
       ) : posts.length === 0 ? (
         <p>No posts yet — be the first!</p>
       ) : (
-        posts.map((post) => (
+        posts.map((post) => {
+          const cState = commentState[post.id]
+          return (
             <div key={post.id} style={{ borderBottom: '1px solid var(--nav-border)', padding: '12px 0' }}>
-                <strong>{post.author?.username || post.author?.wallet}</strong>
-                <p>{post.text}</p>
-                <small style={{ opacity: 0.6 }}>
-                    {post.likeCount} likes · {post.commentCount} comments · {post.tipTotal} tipped
-                </small>
+              <strong>{post.author?.username || post.author?.wallet}</strong>
+              <p>{post.text}</p>
+
+              <div style={{ display: 'flex', gap: 16 }}>
+                <button onClick={() => handleLike(post.id)} disabled={!isLoggedIn}>
+                  ❤ {post.likeCount}
+                </button>
+                <button onClick={() => toggleComments(post.id)}>
+                  💬 {post.commentCount} {cState?.open ? '(hide)' : ''}
+                </button>
+                <span style={{ opacity: 0.6 }}>💰 {post.tipTotal} tipped</span>
+              </div>
+
+              {cState?.open && (
+                <div style={{ marginTop: 12, paddingLeft: 12, borderLeft: '2px solid var(--nav-border)' }}>
+                  {cState.loading ? (
+                    <p>Loading comments...</p>
+                  ) : cState.comments.length === 0 ? (
+                    <p style={{ opacity: 0.6 }}>No comments yet.</p>
+                  ) : (
+                    cState.comments.map((c, i) => (
+                      <div key={c.id || i} style={{ marginBottom: 8 }}>
+                        <strong>{c.author?.username || c.author?.wallet}</strong>: {c.text}
+                      </div>
+                    ))
+                  )}
+
+                  {isLoggedIn && (
+                    <div style={{ marginTop: 8 }}>
+                      <input
+                        value={cState.draft || ''}
+                        onChange={(e) => setDraft(post.id, e.target.value)}
+                        placeholder="Write a comment..."
+                      />
+                      <button
+                        onClick={() => submitComment(post.id)}
+                        disabled={cState.submitting || !cState.draft?.trim()}
+                      >
+                        {cState.submitting ? 'Sending...' : 'Reply'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-        ))
+          )
+        })
       )}
     </div>
   )

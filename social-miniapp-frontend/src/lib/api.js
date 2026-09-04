@@ -64,3 +64,20 @@ export function createPost(token, text) {
     body: JSON.stringify({ text }),
   })
 }
+
+export function toggleLike(token, postId) {
+  return authedRequest(`/posts/${postId}/like`, token, {
+    method: 'POST',
+  })
+}
+
+export function addComment(token, postId, text) {
+  return authedRequest(`/posts/${postId}/comment`, token, {
+    method: 'POST',
+    body: JSON.stringify({ text }),
+  })
+}
+
+export function getPost(postId) {
+  return request(`/posts/${postId}`)
+}
