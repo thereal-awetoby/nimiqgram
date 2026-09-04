@@ -103,3 +103,7 @@ export function markNotificationsRead(token, ids) {
     body: JSON.stringify(ids ? { ids } : {}),
   })
 }
+
+export function getStreaks(wallet) {
+  return request(`/streaks/${wallet}`)
+}

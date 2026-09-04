@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { getProfile, updateProfile } from '../lib/api'
+import { getProfile, updateProfile, getStreaks } from '../lib/api'
 
 function Profile() {
   const { user, token, isLoggedIn } = useAuth()
@@ -9,6 +9,9 @@ function Profile() {
   const [avatarUrl, setAvatarUrl] = useState('')
   const [status, setStatus] = useState('idle')
   const [error, setError] = useState(null)
+
+  const [streakData, setStreakData] = useState(null)
+  const [streakLoading, setStreakLoading] = useState(true)
 
   useEffect(() => {
     if (!user?.wallet) return
@@ -21,8 +24,15 @@ function Profile() {
       })
       .catch((err) => {
         console.error(err)
-        // Not fatal — a brand new user may not have a profile yet
       })
+
+    setStreakLoading(true)
+    getStreaks(user.wallet)
+      .then((data) => setStreakData(data))
+      .catch((err) => {
+        console.error(err)
+      })
+      .finally(() => setStreakLoading(false))
   }, [user])
 
   async function handleSave() {
@@ -67,6 +77,40 @@ function Profile() {
 
       {status === 'saved' && <p style={{ color: 'green' }}>Saved!</p>}
       {error && <p style={{ color: 'red' }}>{error}</p>}
+
+      <hr style={{ margin: '24px 0' }} />
+
+      <h3>🔥 Streak</h3>
+      {streakLoading ? (
+        <p>Loading...</p>
+      ) : streakData ? (
+        <div>
+          <p>Current streak: <strong>{streakData.currentStreak}</strong> days</p>
+          <p>Longest streak: <strong>{streakData.longestStreak}</strong> days</p>
+
+          <h4>🏅 Badges</h4>
+          {streakData.badges && streakData.badges.length > 0 ? (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {streakData.badges.map((badge, i) => (
+                <span
+                  key={i}
+                  style={{
+                    border: '1px solid var(--nav-border)',
+                    borderRadius: 6,
+                    padding: '4px 10px',
+                  }}
+                >
+                  {typeof badge === 'string' ? badge : badge.name || JSON.stringify(badge)}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p style={{ opacity: 0.6 }}>No badges yet.</p>
+          )}
+        </div>
+      ) : (
+        <p style={{ opacity: 0.6 }}>No streak data yet.</p>
+      )}
     </div>
   )
 }
