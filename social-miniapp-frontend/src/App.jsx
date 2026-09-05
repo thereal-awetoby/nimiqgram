@@ -185,6 +185,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Feed />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/:wallet" element={<Profile />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/notifications" element={<Notifications />} />
           </Routes>

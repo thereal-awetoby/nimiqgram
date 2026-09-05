@@ -68,6 +68,18 @@ export function getFollowing(wallet) {
   return request(`/users/${wallet}/following`)
 }
 
+export function getFollowStatus(wallet, token) {
+  return authedRequest(`/users/${wallet}/follow-status`, token)
+}
+
+export function followUser(wallet, token) {
+  return authedRequest(`/users/${wallet}/follow`, token, { method: 'POST', body: JSON.stringify({}) })
+}
+
+export function unfollowUser(wallet, token) {
+  return authedRequest(`/users/${wallet}/follow`, token, { method: 'DELETE' })
+}
+
 export function createPost(token, { text, mediaUrl, mediaType }) {
   return authedRequest('/posts', token, {
     method: 'POST',

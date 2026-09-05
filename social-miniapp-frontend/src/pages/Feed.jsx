@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getFeed, createPost, toggleLike, addComment, getPost, getProfile, recordPostView, getFollowing } from '../lib/api'
 import { uploadMedia, getMediaType } from '../lib/upload'
@@ -465,10 +466,14 @@ function Feed() {
           return (
             <div key={post.id} style={{ padding: '10px 10px 8px', borderBottom: '1px solid var(--nav-border)' }}>
               <div style={{ display: 'flex', gap: 10 }}>
-                <Avatar url={post.author?.avatarUrl} fallback={post.author?.username || post.author?.wallet} />
+                <Link to={`/profile/${encodeURIComponent(post.author?.wallet || '')}`} aria-label={`Open ${post.author?.displayName || post.author?.username || 'profile'}`} style={{ height: 40 }}>
+                  <Avatar url={post.author?.avatarUrl} fallback={post.author?.username || post.author?.wallet} />
+                </Link>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <strong style={{ fontSize: 14.5 }}>{post.author?.displayName || post.author?.username || post.author?.wallet}</strong>
-                  {post.author?.username && <span style={{ color: 'var(--accent-color)', fontSize: 12, marginLeft: 6 }}>@{post.author.username}</span>}
+                  <Link to={`/profile/${encodeURIComponent(post.author?.wallet || '')}`} style={{ color: 'inherit' }}>
+                    <strong style={{ fontSize: 14.5 }}>{post.author?.displayName || post.author?.username || post.author?.wallet}</strong>
+                    {post.author?.username && <span style={{ color: 'var(--accent-color)', fontSize: 12, marginLeft: 6 }}>@{post.author.username}</span>}
+                  </Link>
                   <p style={{ margin: '4px 0 7px', fontSize: 15, lineHeight: 1.4 }}>
                     {renderTextWithLinks(post.text || '')}
                   </p>

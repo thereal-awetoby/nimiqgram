@@ -1,12 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
+import { useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getProfile, updateProfile, getStreaks, getFollowing } from '../lib/api'
+import { getProfile, updateProfile, getStreaks, getFollowing, getFollowStatus, followUser, unfollowUser } from '../lib/api'
 import { uploadMedia } from '../lib/upload'
 import Avatar from '../components/Avatar'
 import LoadingHexagon from '../components/LoadingHexagon'
 
 function Profile() {
   const { user, token, isLoggedIn } = useAuth()
+  const { wallet: profileWallet } = useParams()
+  const targetWallet = profileWallet || user?.wallet
+  const isOwnProfile = Boolean(user?.wallet && targetWallet === user.wallet)
   const [displayName, setDisplayName] = useState('')
   const [username, setUsername] = useState('')
   const [bio, setBio] = useState('')
@@ -22,34 +26,64 @@ function Profile() {
   const [streakLoading, setStreakLoading] = useState(true)
   const [following, setFollowing] = useState([])
   const [followingLoading, setFollowingLoading] = useState(true)
+  const [isFollowing, setIsFollowing] = useState(false)
+  const [followLoading, setFollowLoading] = useState(false)
 
   useEffect(() => {
-    if (!user?.wallet) return
+    if (!targetWallet) return
 
     setProfileLoading(true)
-    getProfile(user.wallet)
+    getProfile(targetWallet)
       .then((profile) => {
         setDisplayName(profile.displayName || profile.username || '')
         setUsername(profile.username || '')
         setBio(profile.bio || '')
         setAvatarUrl(profile.avatarUrl || '')
-        setMode(profile.username ? 'view' : 'edit')
+        setMode(isOwnProfile && !profile.username ? 'edit' : 'view')
       })
       .catch((err) => console.error(err))
       .finally(() => setProfileLoading(false))
 
     setStreakLoading(true)
-    getStreaks(user.wallet)
+    getStreaks(targetWallet)
       .then((data) => setStreakData(data))
       .catch((err) => console.error(err))
       .finally(() => setStreakLoading(false))
 
-    setFollowingLoading(true)
-    getFollowing(user.wallet)
-      .then((data) => setFollowing(data.users || []))
-      .catch((err) => console.error(err))
-      .finally(() => setFollowingLoading(false))
-  }, [user])
+    if (isOwnProfile) {
+      setFollowingLoading(true)
+      getFollowing(targetWallet)
+        .then((data) => setFollowing(data.users || []))
+        .catch((err) => console.error(err))
+        .finally(() => setFollowingLoading(false))
+    } else {
+      setFollowingLoading(false)
+    }
+
+    if (isLoggedIn && !isOwnProfile) {
+      getFollowStatus(targetWallet, token)
+        .then((data) => setIsFollowing(Boolean(data.following)))
+        .catch((err) => console.error(err))
+    }
+  }, [targetWallet, isOwnProfile, isLoggedIn, token])
+
+  async function toggleFollow() {
+    if (!isLoggedIn || !targetWallet || isOwnProfile) return
+    setFollowLoading(true)
+    try {
+      if (isFollowing) {
+        await unfollowUser(targetWallet, token)
+        setIsFollowing(false)
+      } else {
+        await followUser(targetWallet, token)
+        setIsFollowing(true)
+      }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setFollowLoading(false)
+    }
+  }
 
   async function handleAvatarSelect(e) {
     const file = e.target.files?.[0]
@@ -83,7 +117,7 @@ function Profile() {
     }
   }
 
-  if (!isLoggedIn) {
+  if (!targetWallet) {
     return (
       <div style={{ padding: 16, textAlign: 'center', color: 'var(--text-muted)' }}>
         Connect your wallet to edit your profile.
@@ -104,21 +138,15 @@ function Profile() {
           {username && <div style={{ color: 'var(--accent-color)', fontSize: 13 }}>@{username}</div>}
           {bio && <p style={{ color: 'var(--text-muted)', fontSize: 14, margin: '0 0 16px' }}>{bio}</p>}
 
-          <button
-            onClick={() => setMode('edit')}
-            style={{
-              background: 'transparent',
-              border: '1px solid var(--accent-color)',
-              color: 'var(--accent-color)',
-              borderRadius: 20,
-              padding: '7px 20px',
-              fontFamily: 'var(--font-display)',
-              fontWeight: 600,
-              fontSize: 13,
-            }}
-          >
-            Edit profile
-          </button>
+          {isOwnProfile ? (
+            <button onClick={() => setMode('edit')} style={{ background: 'transparent', border: '1px solid var(--accent-color)', color: 'var(--accent-color)', borderRadius: 20, padding: '7px 20px', fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 13 }}>
+              Edit profile
+            </button>
+          ) : isLoggedIn ? (
+            <button onClick={toggleFollow} disabled={followLoading} style={{ background: isFollowing ? 'transparent' : 'var(--accent-color)', color: isFollowing ? 'var(--accent-color)' : 'var(--bg-color)', border: '1px solid var(--accent-color)', borderRadius: 20, padding: '7px 22px', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, opacity: followLoading ? 0.6 : 1 }}>
+              {followLoading ? '...' : isFollowing ? 'Following' : 'Follow'}
+            </button>
+          ) : null}
         </div>
       ) : (
         <div>
@@ -242,7 +270,7 @@ function Profile() {
 
       <hr style={{ border: 'none', borderTop: '1px solid var(--nav-border)', margin: '32px 0' }} />
 
-      <div style={{ marginBottom: 24 }}>
+      {isOwnProfile && <div style={{ marginBottom: 24 }}>
         <h3 style={{ fontSize: 15, marginBottom: 12, textAlign: 'left' }}>Following</h3>
         {followingLoading ? (
           <LoadingHexagon label="Loading following" />
@@ -262,7 +290,7 @@ function Profile() {
             ))}
           </div>
         )}
-      </div>
+      </div>}
 
       <h3 style={{ fontSize: 15, marginBottom: 16 }}>Activity</h3>
 

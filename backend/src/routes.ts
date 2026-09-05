@@ -146,6 +146,17 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     return { users: result.rows.map((row: Record<string, any>) => ({ wallet: row.wallet, displayName: row.display_name, username: row.username, bio: row.bio, avatarUrl: row.avatar_url })) };
   });
 
+  app.get("/users/:wallet/follow-status", async (request) => {
+    const session = getSession(request);
+    const params = request.params as { wallet: string };
+    if (!session || session.wallet === params.wallet) return { following: false };
+    const result = await pool.query(
+      `select exists(select 1 from follows where follower_wallet = $1 and followed_wallet = $2) as following`,
+      [session.wallet, params.wallet]
+    );
+    return { following: Boolean(result.rows[0]?.following) };
+  });
+
   app.post("/users/:wallet/follow", async (request, reply) => {
     const session = getSession(request);
     if (!session) return reply.unauthorized();
