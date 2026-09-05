@@ -35,7 +35,7 @@ function WalletConnect() {
       setStatus('signing')
       const challenge = await getChallenge(wallet)
 
-      const sigResult = await nimiq.sign(challenge.message)
+      const sigResult = await nimiq.sign({ message: challenge.message, isHex: false })
       if (sigResult?.error) throw new Error(sigResult.error.message || 'Signing failed or was rejected')
 
       const authResult = await verifyAuth({
