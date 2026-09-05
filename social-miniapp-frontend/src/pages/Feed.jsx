@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { getFeed, createPost, toggleLike, addComment, getPost, getProfile } from '../lib/api'
+import { getFeed, createPost, toggleLike, addComment, getPost, getProfile, recordPostView } from '../lib/api'
 import { uploadMedia, getMediaType } from '../lib/upload'
 import TipModal from '../components/TipModal'
 import Avatar from '../components/Avatar'
@@ -53,23 +53,35 @@ function EyeIcon() {
   )
 }
 
-function ActionButton({ onClick, disabled, active, children, compact = false }) {
+function ActionButton({ onClick, disabled, active, children, compact = false, color = 'var(--text-muted)' }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: compact ? 5 : 6,
-        background: active ? 'rgba(242,169,59,0.08)' : 'transparent',
-        border: 'none', borderRadius: 12, padding: compact ? '6px 8px' : '6px 10px',
-        color: active ? 'var(--accent-color)' : 'var(--text-muted)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+        background: active ? 'rgba(242,169,59,0.06)' : 'transparent',
+        border: 'none', borderRadius: 12, padding: compact ? '6px 0' : '6px 8px',
+        color: color,
         cursor: disabled ? 'default' : 'pointer',
         fontFamily: 'var(--font-body)', fontSize: 12.5, fontWeight: 600,
-        minWidth: compact ? 48 : 58,
+        minWidth: compact ? 42 : 52,
+        flex: 1,
       }}
     >
       {children}
     </button>
+  )
+}
+
+function ShareIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 8a3 3 0 1 0-2.8-4H13a3 3 0 0 0 0 6h.2A3 3 0 0 0 16 8Z" />
+      <path d="M8 14a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" />
+      <path d="M18 20a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+      <path d="M10.5 15.5 15 12.5M10.5 8.5 15 11.5" />
+    </svg>
   )
 }
 
@@ -146,12 +158,15 @@ function Feed() {
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef(null)
   const [myAvatar, setMyAvatar] = useState(null)
+  const viewedPostsRef = useRef(new Set())
 
   async function loadFeed() {
     setLoading(true)
     try {
       const data = await getFeed()
-      setPosts(data.posts || [])
+      const nextPosts = data.posts || []
+      setPosts(nextPosts)
+      setLikedMap(Object.fromEntries(nextPosts.map((post) => [post.id, Boolean(post.likedByMe)])))
     } catch (err) {
       console.error(err)
       setError(err.message)
@@ -161,6 +176,21 @@ function Feed() {
   }
 
     useEffect(() => { loadFeed() }, [])
+
+  useEffect(() => {
+    if (!isLoggedIn || !posts.length || !token) return
+
+    posts.forEach(async (post) => {
+      if (viewedPostsRef.current.has(post.id)) return
+      viewedPostsRef.current.add(post.id)
+      try {
+        const result = await recordPostView(token, post.id)
+        setPosts((prev) => prev.map((item) => item.id === post.id ? { ...item, viewCount: result.viewCount } : item))
+      } catch (err) {
+        console.error('Failed to record post view', err)
+      }
+    })
+  }, [posts, isLoggedIn, token])
 
   useEffect(() => {
     if (!user?.wallet) return
@@ -236,7 +266,7 @@ function Feed() {
     if (!isLoggedIn) return
     try {
       const result = await toggleLike(token, postId)
-      setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, likeCount: result.likeCount } : p)))
+      setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, likeCount: result.likeCount, likedByMe: result.liked } : p)))
       setLikedMap((prev) => ({ ...prev, [postId]: result.liked }))
     } catch (err) {
       console.error(err)
@@ -379,23 +409,27 @@ function Feed() {
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 6,
-                      padding: '6px 0 2px',
+                      justifyContent: 'space-between',
+                      width: '100%',
+                      padding: '8px 4px 2px',
                       marginTop: 2,
+                      borderTop: '1px solid var(--nav-border)',
                     }}
                   >
-                    <ActionButton onClick={() => handleLike(post.id)} disabled={!isLoggedIn} active={isLiked} compact>
-                      <HeartIcon filled={isLiked} /> {post.likeCount ?? 0}
-                    </ActionButton>
-                    <ActionButton onClick={() => toggleComments(post.id)} active={cState?.open} compact>
+                    <ActionButton onClick={() => toggleComments(post.id)} active={cState?.open} compact color="#1d9bf0">
                       <CommentIcon /> {post.commentCount ?? 0}
                     </ActionButton>
-                    <ActionButton onClick={() => setTippingPost(post)} disabled={!isLoggedIn} compact>
+                    <ActionButton onClick={() => setTippingPost(post)} disabled={!isLoggedIn} compact color="#d5a22a">
                       <TipIcon /> {post.tipTotal ?? 0}
                     </ActionButton>
-                    <ActionButton disabled compact>
+                    <ActionButton onClick={() => handleLike(post.id)} disabled={!isLoggedIn} active={isLiked} compact color="#e0245e">
+                      <HeartIcon filled={isLiked} /> {post.likeCount ?? 0}
+                    </ActionButton>
+                    <ActionButton disabled compact color="#6b7280">
                       <EyeIcon /> {post.viewCount ?? 0}
+                    </ActionButton>
+                    <ActionButton disabled compact color="#6b7280">
+                      <ShareIcon />
                     </ActionButton>
                   </div>
 

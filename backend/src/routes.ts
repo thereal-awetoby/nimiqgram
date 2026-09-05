@@ -41,8 +41,10 @@ function mapPost(row: Record<string, any>) {
       avatarUrl: row.avatar_url
     },
     likeCount: row.like_count,
+    likedByMe: Boolean(row.liked_by_me),
     commentCount: row.comment_count,
-    tipTotal: row.tip_total
+    tipTotal: row.tip_total,
+    viewCount: row.view_count ?? 0
   };
 }
 
@@ -180,19 +182,24 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   app.get("/feed", async (request) => {
     const query = request.query as { cursor?: string };
     const cursor = query.cursor ? new Date(query.cursor) : new Date();
+    const session = getSession(request);
+    const viewerWallet = session?.wallet ?? "__anonymous__";
     const result = await pool.query(
       `select p.id, p.text, p.media_url, p.media_type, p.created_at, u.wallet as author_wallet, u.username,
               u.bio, u.avatar_url,
               count(distinct l.wallet)::int as like_count,
               count(distinct c.id)::int as comment_count,
-              coalesce(sum(t.amount_nim) filter (where t.status = 'verified'), 0)::text as tip_total
+              coalesce(sum(t.amount_nim) filter (where t.status = 'verified'), 0)::text as tip_total,
+              count(distinct v.viewer_wallet)::int as view_count,
+              exists(select 1 from likes l2 where l2.post_id = p.id and l2.wallet = $2) as liked_by_me
        from posts p join users u on u.wallet = p.author_wallet
        left join likes l on l.post_id = p.id
        left join comments c on c.post_id = p.id
        left join tips t on t.post_id = p.id
+       left join post_views v on v.post_id = p.id
        where p.created_at < $1
        group by p.id, u.wallet order by p.created_at desc limit 21`,
-      [cursor]
+      [cursor, viewerWallet]
     );
     const hasMore = result.rows.length > 20;
     const rows = hasMore ? result.rows.slice(0, 20) : result.rows;
@@ -214,14 +221,21 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
 
   app.get("/posts/:id", async (request, reply) => {
     const params = request.params as { id: string };
+    const session = getSession(request);
+    const viewerWallet = session?.wallet ?? "__anonymous__";
     const result = await pool.query(
       `select p.id, p.text, p.media_url, p.media_type, p.created_at, u.wallet as author_wallet, u.username, u.bio, u.avatar_url,
               count(distinct l.wallet)::int as like_count, count(distinct c.id)::int as comment_count,
-              coalesce(sum(t.amount_nim) filter (where t.status = 'verified'), 0)::text as tip_total
+              coalesce(sum(t.amount_nim) filter (where t.status = 'verified'), 0)::text as tip_total,
+              count(distinct v.viewer_wallet)::int as view_count,
+              exists(select 1 from likes l2 where l2.post_id = p.id and l2.wallet = $2) as liked_by_me
        from posts p join users u on u.wallet = p.author_wallet
-       left join likes l on l.post_id = p.id left join comments c on c.post_id = p.id left join tips t on t.post_id = p.id
+       left join likes l on l.post_id = p.id
+       left join comments c on c.post_id = p.id
+       left join tips t on t.post_id = p.id
+       left join post_views v on v.post_id = p.id
        where p.id = $1 group by p.id, u.wallet`,
-      [params.id]
+      [params.id, viewerWallet]
     );
     if (result.rowCount === 0) return reply.notFound("post not found");
     const comments = await pool.query(
@@ -251,7 +265,22 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       }
     }
     const count = await pool.query(`select count(*)::int as count from likes where post_id = $1`, [params.id]);
-    return { liked, likeCount: count.rows[0].count };
+    return { liked, likeCount: count.rows[0].count, likedByMe: liked };
+  });
+
+  app.post("/posts/:id/view", async (request, reply) => {
+    const session = getSession(request);
+    if (!session) return reply.unauthorized();
+    const params = request.params as { id: string };
+    const post = await pool.query(`select id from posts where id = $1`, [params.id]);
+    if (post.rowCount === 0) return reply.notFound("post not found");
+
+    await pool.query(
+      `insert into post_views (post_id, viewer_wallet) values ($1, $2) on conflict do nothing`,
+      [params.id, session.wallet]
+    );
+    const count = await pool.query(`select count(*)::int as count from post_views where post_id = $1`, [params.id]);
+    return { viewed: true, viewCount: count.rows[0].count };
   });
 
   app.post("/posts/:id/comment", async (request, reply) => {

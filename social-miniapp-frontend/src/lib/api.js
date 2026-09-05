@@ -75,6 +75,13 @@ export function toggleLike(token, postId) {
   })
 }
 
+export function recordPostView(token, postId) {
+  return authedRequest(`/posts/${postId}/view`, token, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  })
+}
+
 export function addComment(token, postId, text) {
   return authedRequest(`/posts/${postId}/comment`, token, {
     method: 'POST',
