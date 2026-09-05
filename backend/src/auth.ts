@@ -87,7 +87,7 @@ export async function verifyWalletSignature(challenge: AuthChallenge, request: A
     return undefined;
   }
 
-  const messageBytes = Buffer.from(challenge.message, "utf8");
+  const messageBytes = Buffer.from(`\x16Nimiq Signed Message:\n${challenge.message}`, "utf8");
 
   let verified: boolean;
   try {
