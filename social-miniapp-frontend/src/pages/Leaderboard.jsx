@@ -112,3 +112,18 @@ function Leaderboard() {
           }}
         >
           <div style={{ minWidth: 220, maxWidth: 260 }}>
+            <h3 style={{ fontSize: 15, marginBottom: 10 }}>Top Tippers</h3>
+            <RankedList list={topTippers} emptyLabel="No tips yet." />
+          </div>
+
+          <div style={{ minWidth: 220, maxWidth: 260 }}>
+            <h3 style={{ fontSize: 15, marginBottom: 10 }}>Top Earners</h3>
+            <RankedList list={topEarners} emptyLabel="No tips yet." />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default Leaderboard
