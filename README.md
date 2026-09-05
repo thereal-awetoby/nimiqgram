@@ -41,7 +41,7 @@ DATABASE_URL=postgresql://user:password@host:5432/dbname
 SESSION_SECRET=replace_with_a_long_random_string
 NODE_ENV=development
 NIMIQ_NETWORK=testnet
-NIMIQ_RPC_URL=https://rpc.nimiq.watch
+NIMIQ_RPC_URL=https://rpc.nimiqwatch.com
 CORS_ORIGIN=http://localhost:3000
 ```
 

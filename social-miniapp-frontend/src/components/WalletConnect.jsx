@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getChallenge, verifyAuth } from '../lib/api'
+import { getChallenge, verifyAuth, getProfile } from '../lib/api'
 
 function truncateWallet(wallet) {
   if (!wallet) return ''
@@ -9,6 +10,7 @@ function truncateWallet(wallet) {
 
 function WalletConnect() {
   const { user, login, logout, isLoggedIn } = useAuth()
+  const navigate = useNavigate()
   const [status, setStatus] = useState('idle')
   const [error, setError] = useState(null)
 
@@ -43,6 +45,12 @@ function WalletConnect() {
       })
 
       login(authResult)
+      try {
+        const profile = await getProfile(wallet)
+        if (!profile.username) navigate('/profile', { replace: true })
+      } catch {
+        navigate('/profile', { replace: true })
+      }
       setStatus('connected')
     } catch (err) {
       console.error(err)

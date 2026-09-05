@@ -19,4 +19,4 @@ services:
       - key: NIMIQ_NETWORK
         value: testnet
       - key: NIMIQ_RPC_URL
-        value: https://rpc.nimiq.watch
+        value: https://rpc.nimiqwatch.com

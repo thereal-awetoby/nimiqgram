@@ -110,7 +110,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   app.get("/profile/:wallet", async (request, reply) => {
     const params = request.params as { wallet: string };
     const result = await pool.query(
-      `select u.wallet, u.username, u.bio, u.avatar_url,
+      `select u.wallet, u.display_name, u.username, u.bio, u.avatar_url,
               coalesce(s.badges, '[]'::jsonb) as badges,
               coalesce(s.current_streak, 0) as streak
        from users u left join streaks s on s.wallet = u.wallet where u.wallet = $1`,
