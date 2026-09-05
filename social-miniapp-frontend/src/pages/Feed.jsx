@@ -1,11 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getFeed, createPost, toggleLike, addComment, getPost, getProfile, recordPostView, getFollowing } from '../lib/api'
 import { uploadMedia, getMediaType } from '../lib/upload'
 import TipModal from '../components/TipModal'
 import Avatar from '../components/Avatar'
-import LoadingHexagon from '../components/LoadingHexagon'
 
 const MAX_VIDEO_SECONDS = 5 * 60
 const URL_REGEX = /(https?:\/\/[^\s]+)/g
@@ -456,7 +454,7 @@ function Feed() {
       )}
 
       {loading ? (
-        <LoadingHexagon label="Loading feed" />
+        <p style={{ padding: 16, color: 'var(--text-muted)' }}>Loading feed...</p>
       ) : posts.length === 0 ? (
         <p style={{ padding: 16, color: 'var(--text-muted)' }}>No posts yet — be the first!</p>
       ) : (
@@ -466,25 +464,19 @@ function Feed() {
           return (
             <div key={post.id} style={{ padding: '10px 10px 8px', borderBottom: '1px solid var(--nav-border)' }}>
               <div style={{ display: 'flex', gap: 10 }}>
-                <Link to={`/profile/${encodeURIComponent(post.author?.wallet || '')}`} aria-label={`Open ${post.author?.displayName || post.author?.username || 'profile'}`} style={{ height: 40 }}>
-                  <Avatar url={post.author?.avatarUrl} fallback={post.author?.username || post.author?.wallet} />
-                </Link>
+                <Avatar url={post.author?.avatarUrl} fallback={post.author?.username || post.author?.wallet} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <Link to={`/profile/${encodeURIComponent(post.author?.wallet || '')}`} style={{ color: 'inherit' }}>
-                    <strong style={{ fontSize: 14.5 }}>{post.author?.displayName || post.author?.username || post.author?.wallet}</strong>
-                    {post.author?.username && <span style={{ color: 'var(--accent-color)', fontSize: 12, marginLeft: 6 }}>@{post.author.username}</span>}
-                  </Link>
-                  <Link to={`/post/${post.id}`} style={{ display: 'block', color: 'inherit' }}>
-                    <p style={{ margin: '4px 0 7px', fontSize: 15, lineHeight: 1.4 }}>
-                      {renderTextWithLinks(post.text || '')}
-                    </p>
+                  <strong style={{ fontSize: 14.5 }}>{post.author?.displayName || post.author?.username || post.author?.wallet}</strong>
+                  {post.author?.username && <span style={{ color: 'var(--accent-color)', fontSize: 12, marginLeft: 6 }}>@{post.author.username}</span>}
+                  <p style={{ margin: '4px 0 7px', fontSize: 15, lineHeight: 1.4 }}>
+                    {renderTextWithLinks(post.text || '')}
+                  </p>
 
-                    {post.mediaUrl && (
-                      <div style={{ marginBottom: 10 }} onClick={(event) => event.preventDefault()}>
-                        <PostMedia url={post.mediaUrl} type={post.mediaType} />
-                      </div>
-                    )}
-                  </Link>
+                  {post.mediaUrl && (
+                    <div style={{ marginBottom: 10 }}>
+                      <PostMedia url={post.mediaUrl} type={post.mediaType} />
+                    </div>
+                  )}
 
                   <div
                     style={{
@@ -518,7 +510,7 @@ function Feed() {
                   {cState?.open && (
                     <div style={{ marginTop: 12, paddingLeft: 12, borderLeft: '2px solid var(--nav-border)' }}>
                       {cState.loading ? (
-                        <LoadingHexagon label="Loading comments" />
+                        <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading comments...</p>
                       ) : cState.comments.length === 0 ? (
                         <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>No comments yet.</p>
                       ) : (
@@ -558,10 +550,7 @@ function Feed() {
         <TipModal
           post={tippingPost}
           onClose={() => setTippingPost(null)}
-          onSuccess={(result) => {
-            setPosts((prev) => prev.map((post) => post.id === tippingPost.id ? { ...post, tipTotal: result.status === 'verified' ? (Number(post.tipTotal || 0) + Number(result.amount || 0)).toString() : post.tipTotal } : post))
-            setTippingPost(null)
-          }}
+          onSuccess={() => { setTippingPost(null); loadFeed() }}
         />
       )}
     </div>
