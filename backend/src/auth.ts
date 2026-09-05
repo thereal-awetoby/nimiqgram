@@ -1,5 +1,5 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
-import { PublicKey, Signature } from "@nimiq/core";
+import { Hash, PublicKey, Signature } from "@nimiq/core";
 import { config } from "./config.js";
 
 export type AuthChallenge = {
@@ -68,17 +68,6 @@ export async function verifyWalletSignature(challenge: AuthChallenge, request: A
     console.warn({ walletSuffix, derivedSuffix: derivedWallet.slice(-6), reason: "public-key-wallet-mismatch-using-derived-wallet" }, "Wallet address differed from signing key; using derived wallet");
   }
 
-  // Verified locally via @nimiq/core instead of the RPC's "verifySignature"
-  // method, which isn't a documented/standard Nimiq node RPC call and was
-  // very likely either hitting an unsupported method or checking the raw
-  // message bytes against a signature produced over a differently-encoded
-  // (e.g. prefixed) message.
-  //
-  // Confirmed against the installed @nimiq/core wasm-bindgen API
-  // (node --input-type=module -e "..."): `verify` lives on PublicKey, not
-  // Signature. Signature only exposes serialize/toHex/free. Call shape is
-  // publicKey.verify(signature, messageBytes) — signature first, then the
-  // raw message bytes.
   let signature: Signature;
   try {
     signature = Signature.fromHex(request.signature);
@@ -87,11 +76,17 @@ export async function verifyWalletSignature(challenge: AuthChallenge, request: A
     return undefined;
   }
 
-  const messageBytes = Buffer.from(`\x16Nimiq Signed Message:\n${challenge.message}`, "utf8");
+  const messageBytes = Buffer.from(challenge.message, "utf8");
+  const signedMessageBytes = Buffer.concat([
+    Buffer.from("\x16Nimiq Signed Message:\n", "utf8"),
+    Buffer.from(String(messageBytes.length), "utf8"),
+    messageBytes
+  ]);
+  const messageHash = Hash.computeSha256(signedMessageBytes);
 
   let verified: boolean;
   try {
-    verified = publicKey.verify(signature, messageBytes);
+    verified = publicKey.verify(signature, messageHash);
   } catch (error) {
     // publicKey.verify() may throw on a malformed/garbage signature rather
     // than returning false — keep this distinct from a clean "rejected"
