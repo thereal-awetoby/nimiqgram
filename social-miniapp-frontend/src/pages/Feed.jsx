@@ -257,11 +257,25 @@ function Feed() {
               <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <input ref={fileInputRef} type="file" accept="image/*,video/*" onChange={handleFileSelect} style={{ display: 'none' }} />
                 <button
-                  onClick={() => fileInputRef.current?.click()}
-                  type="button"
-                  style={{ background: 'transparent', border: 'none', color: 'var(--accent-color)', fontSize: 18 }}
+                    onClick={() => fileInputRef.current?.click()}
+                    type="button"
+                    style={{
+                        background: 'transparent',
+                        border: '1px solid var(--nav-border)',
+                        borderRadius: '50%',
+                        width: 32,
+                        height: 32,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 0,
+                        color: 'var(--accent-color)',
+                    }}
                 >
-                  📎
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
                 </button>
                 <button
                   onClick={handlePost}

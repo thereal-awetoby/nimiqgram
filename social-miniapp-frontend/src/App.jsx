@@ -62,11 +62,17 @@ function App() {
           <button
             onClick={toggleTheme}
             style={{
-              background: 'transparent',
+              background: 'var(--bg-elevated)',
               border: '1px solid var(--nav-border)',
-              borderRadius: 20,
-              padding: '6px 14px',
-              color: 'var(--text-color)',
+              borderRadius: '50%',
+              width: 36,
+              height: 36,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 15,
+              padding: 0,
+              lineHeight: 1,
             }}
           >
             {theme === 'light' ? '🌙' : '☀️'}
