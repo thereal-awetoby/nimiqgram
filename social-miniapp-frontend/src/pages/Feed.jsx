@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getFeed, createPost, toggleLike, addComment, getPost, getProfile, recordPostView, getFollowing } from '../lib/api'
 import { uploadMedia, getMediaType } from '../lib/upload'
 import TipModal from '../components/TipModal'
 import Avatar from '../components/Avatar'
+import LoadingHexagon from '../components/LoadingHexagon'
 
 const MAX_VIDEO_SECONDS = 5 * 60
 const URL_REGEX = /(https?:\/\/[^\s]+)/g
@@ -166,7 +168,7 @@ function Feed() {
   const [commentState, setCommentState] = useState({})
   const [tippingPost, setTippingPost] = useState(null)
   const [followingUsers, setFollowingUsers] = useState([])
-  const [feedScope, setFeedScope] = useState('following')
+  const [feedScope, setFeedScope] = useState('all')
 
   const [mediaFile, setMediaFile] = useState(null)
   const [mediaPreview, setMediaPreview] = useState(null)
@@ -206,7 +208,7 @@ function Feed() {
       return
     }
 
-    setFeedScope((prev) => (prev === 'following' || prev === 'all' ? prev : 'following'))
+    setFeedScope((prev) => (prev === 'following' || prev === 'all' ? prev : 'all'))
   }, [user, token])
 
   useEffect(() => {
@@ -424,13 +426,13 @@ function Feed() {
       {isLoggedIn && (
         <div style={{ padding: '12px 12px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <strong style={{ fontSize: 13, color: 'var(--text-muted)' }}>Following</strong>
+            <strong style={{ fontSize: 13, color: 'var(--text-muted)' }}>{feedScope === 'all' ? 'For you' : 'Following'}</strong>
             <div style={{ display: 'flex', gap: 6 }}>
-              <button onClick={() => setFeedScope('following')} style={{ background: feedScope === 'following' ? 'var(--accent-color)' : 'transparent', color: feedScope === 'following' ? 'var(--bg-color)' : 'var(--text-color)', border: '1px solid var(--nav-border)', borderRadius: 999, padding: '5px 10px', fontSize: 12, fontWeight: 700 }}>
-                Following
-              </button>
               <button onClick={() => setFeedScope('all')} style={{ background: feedScope === 'all' ? 'var(--accent-color)' : 'transparent', color: feedScope === 'all' ? 'var(--bg-color)' : 'var(--text-color)', border: '1px solid var(--nav-border)', borderRadius: 999, padding: '5px 10px', fontSize: 12, fontWeight: 700 }}>
                 For you
+              </button>
+              <button onClick={() => setFeedScope('following')} style={{ background: feedScope === 'following' ? 'var(--accent-color)' : 'transparent', color: feedScope === 'following' ? 'var(--bg-color)' : 'var(--text-color)', border: '1px solid var(--nav-border)', borderRadius: 999, padding: '5px 10px', fontSize: 12, fontWeight: 700 }}>
+                Following
               </button>
             </div>
           </div>
@@ -454,7 +456,7 @@ function Feed() {
       )}
 
       {loading ? (
-        <p style={{ padding: 16, color: 'var(--text-muted)' }}>Loading feed...</p>
+        <LoadingHexagon label="Loading feed" />
       ) : posts.length === 0 ? (
         <p style={{ padding: 16, color: 'var(--text-muted)' }}>No posts yet — be the first!</p>
       ) : (
@@ -464,19 +466,25 @@ function Feed() {
           return (
             <div key={post.id} style={{ padding: '10px 10px 8px', borderBottom: '1px solid var(--nav-border)' }}>
               <div style={{ display: 'flex', gap: 10 }}>
-                <Avatar url={post.author?.avatarUrl} fallback={post.author?.username || post.author?.wallet} />
+                <Link to={`/profile/${encodeURIComponent(post.author?.wallet || '')}`} aria-label={`Open ${post.author?.displayName || post.author?.username || 'profile'}`} style={{ height: 40 }}>
+                  <Avatar url={post.author?.avatarUrl} fallback={post.author?.username || post.author?.wallet} />
+                </Link>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <strong style={{ fontSize: 14.5 }}>{post.author?.displayName || post.author?.username || post.author?.wallet}</strong>
-                  {post.author?.username && <span style={{ color: 'var(--accent-color)', fontSize: 12, marginLeft: 6 }}>@{post.author.username}</span>}
-                  <p style={{ margin: '4px 0 7px', fontSize: 15, lineHeight: 1.4 }}>
-                    {renderTextWithLinks(post.text || '')}
-                  </p>
+                  <Link to={`/profile/${encodeURIComponent(post.author?.wallet || '')}`} style={{ color: 'inherit' }}>
+                    <strong style={{ fontSize: 14.5 }}>{post.author?.displayName || post.author?.username || post.author?.wallet}</strong>
+                    {post.author?.username && <span style={{ color: 'var(--accent-color)', fontSize: 12, marginLeft: 6 }}>@{post.author.username}</span>}
+                  </Link>
+                  <Link to={`/post/${post.id}`} style={{ display: 'block', color: 'inherit' }}>
+                    <p style={{ margin: '4px 0 7px', fontSize: 15, lineHeight: 1.4 }}>
+                      {renderTextWithLinks(post.text || '')}
+                    </p>
 
-                  {post.mediaUrl && (
-                    <div style={{ marginBottom: 10 }}>
-                      <PostMedia url={post.mediaUrl} type={post.mediaType} />
-                    </div>
-                  )}
+                    {post.mediaUrl && (
+                      <div style={{ marginBottom: 10 }} onClick={(event) => event.preventDefault()}>
+                        <PostMedia url={post.mediaUrl} type={post.mediaType} />
+                      </div>
+                    )}
+                  </Link>
 
                   <div
                     style={{
@@ -510,7 +518,7 @@ function Feed() {
                   {cState?.open && (
                     <div style={{ marginTop: 12, paddingLeft: 12, borderLeft: '2px solid var(--nav-border)' }}>
                       {cState.loading ? (
-                        <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading comments...</p>
+                        <LoadingHexagon label="Loading comments" />
                       ) : cState.comments.length === 0 ? (
                         <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>No comments yet.</p>
                       ) : (
@@ -550,7 +558,10 @@ function Feed() {
         <TipModal
           post={tippingPost}
           onClose={() => setTippingPost(null)}
-          onSuccess={() => { setTippingPost(null); loadFeed() }}
+          onSuccess={(result) => {
+            setPosts((prev) => prev.map((post) => post.id === tippingPost.id ? { ...post, tipTotal: result.status === 'verified' ? (Number(post.tipTotal || 0) + Number(result.amount || 0)).toString() : post.tipTotal } : post))
+            setTippingPost(null)
+          }}
         />
       )}
     </div>
