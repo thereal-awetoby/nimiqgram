@@ -13,15 +13,16 @@ function RankedList({ list, emptyLabel }) {
           style={{
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'center',
             gap: 10,
             padding: '10px 0',
             borderBottom: i < list.length - 1 ? '1px solid var(--nav-border)' : 'none',
           }}
         >
-          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, color: 'var(--text-muted)', fontSize: 13, width: 16 }}>
+          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, color: 'var(--text-muted)', fontSize: 13 }}>
             {i + 1}
           </span>
-          <span style={{ flex: 1, fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 14, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {entry.username || entry.wallet}
           </span>
           <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 13.5, color: 'var(--accent-color)' }}>
@@ -64,7 +65,7 @@ function Leaderboard() {
   }, [range])
 
   return (
-    <div style={{ padding: 16 }}>
+    <div style={{ padding: 16, textAlign: 'center' }}>
       <h2 style={{ margin: '0 0 16px' }}>Leaderboard</h2>
 
       <div
@@ -73,7 +74,7 @@ function Leaderboard() {
           border: '1px solid var(--nav-border)',
           borderRadius: 20,
           padding: 3,
-          marginBottom: 24,
+          marginBottom: 32,
         }}
       >
         {['daily', 'weekly'].map((r) => (
@@ -102,20 +103,12 @@ function Leaderboard() {
       {loading ? (
         <p style={{ color: 'var(--text-muted)' }}>Loading leaderboard...</p>
       ) : (
-        <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
-          <div style={{ flex: '1 1 220px', minWidth: 220 }}>
-            <h3 style={{ fontSize: 15, marginBottom: 10 }}>Top Tippers</h3>
-            <RankedList list={topTippers} emptyLabel="No tips yet." />
-          </div>
-
-          <div style={{ flex: '1 1 220px', minWidth: 220 }}>
-            <h3 style={{ fontSize: 15, marginBottom: 10 }}>Top Earners</h3>
-            <RankedList list={topEarners} emptyLabel="No tips yet." />
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-export default Leaderboard
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: 48,
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ minWidth: 220, maxWidth: 260 }}>
