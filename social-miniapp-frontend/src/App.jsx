@@ -8,11 +8,59 @@ import WalletConnect from './components/WalletConnect'
 import NimiqWatermark from './components/NimiqWatermark'
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Feed' },
-  { to: '/leaderboard', label: 'Leaderboard' },
-  { to: '/notifications', label: 'Notifications' },
-  { to: '/profile', label: 'Profile' },
+  { to: '/', label: 'Feed', icon: 'home' },
+  { to: '/leaderboard', label: 'Leaderboard', icon: 'chart' },
+  { to: '/notifications', label: 'Notifications', icon: 'bell' },
+  { to: '/profile', label: 'Profile', icon: 'user' },
 ]
+
+function NavIcon({ type, active }) {
+  const common = {
+    width: 15,
+    height: 15,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: active ? 'var(--bg-color)' : 'currentColor',
+    strokeWidth: 1.9,
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round',
+  }
+
+  switch (type) {
+    case 'home':
+      return (
+        <svg {...common}>
+          <path d="M3 10.5 12 3l9 7.5" />
+          <path d="M5 9.5V20h14V9.5" />
+        </svg>
+      )
+    case 'chart':
+      return (
+        <svg {...common}>
+          <path d="M4 18h16" />
+          <path d="M7 15V9" />
+          <path d="M12 15V5" />
+          <path d="M17 15v-7" />
+        </svg>
+      )
+    case 'bell':
+      return (
+        <svg {...common}>
+          <path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h11" />
+          <path d="M10 20a2 2 0 0 0 4 0" />
+        </svg>
+      )
+    case 'user':
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 19c1.5-3 5-4.5 8-4.5s6.5 1.5 8 4.5" />
+        </svg>
+      )
+    default:
+      return null
+  }
+}
 
 function BottomNav() {
   const location = useLocation()
@@ -21,16 +69,21 @@ function BottomNav() {
     <nav
       style={{
         position: 'fixed',
-        bottom: 12,
         left: '50%',
+        bottom: 8,
         transform: 'translateX(-50%)',
-        width: 'calc(100% - 32px)',
-        maxWidth: 528,
+        width: 'min(calc(100% - 18px), 520px)',
         display: 'flex',
-        border: '1px solid var(--nav-border)',
-        borderRadius: 20,
-        padding: 4,
-        background: 'var(--bg-elevated)',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 6,
+        padding: '5px',
+        border: '1px solid rgba(184, 121, 14, 0.28)',
+        borderRadius: 18,
+        background: 'rgba(255,255,255,0.94)',
+        backdropFilter: 'blur(12px)',
+        boxShadow: '0 12px 26px rgba(23, 23, 26, 0.12)',
+        zIndex: 50,
       }}
     >
       {NAV_ITEMS.map((item) => {
@@ -41,16 +94,23 @@ function BottomNav() {
             to={item.to}
             style={{
               flex: 1,
-              textAlign: 'center',
-              padding: '8px 4px',
-              borderRadius: 16,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              minHeight: 34,
+              padding: '7px 10px',
+              borderRadius: 12,
               fontSize: 12.5,
-              fontWeight: 600,
+              fontWeight: 700,
+              letterSpacing: '0.01em',
               background: active ? 'var(--accent-color)' : 'transparent',
               color: active ? 'var(--bg-color)' : 'var(--text-muted)',
+              transition: 'all 0.18s ease',
             }}
           >
-            {item.label}
+            <NavIcon type={item.icon} active={active} />
+            <span>{item.label}</span>
           </Link>
         )
       })}
@@ -60,14 +120,30 @@ function BottomNav() {
 
 function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light')
+  const [isBooting, setIsBooting] = useState(true)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem('theme', theme)
   }, [theme])
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => setIsBooting(false), 1200)
+    return () => window.clearTimeout(timer)
+  }, [])
+
   function toggleTheme() {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))
+  }
+
+  if (isBooting) {
+    return (
+      <div className="boot-screen">
+        <div className="boot-loader" aria-label="Loading app">
+          <div className="polygon-shape" />
+        </div>
+      </div>
+    )
   }
 
   return (

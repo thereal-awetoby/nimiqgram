@@ -44,18 +44,28 @@ function TipIcon() {
   )
 }
 
-function ActionButton({ onClick, disabled, active, children }) {
+function EyeIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  )
+}
+
+function ActionButton({ onClick, disabled, active, children, compact = false }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       style={{
-        display: 'flex', alignItems: 'center', gap: 6,
-        background: active ? 'rgba(242,169,59,0.1)' : 'transparent',
-        border: 'none', borderRadius: 16, padding: '6px 12px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: compact ? 5 : 6,
+        background: active ? 'rgba(242,169,59,0.08)' : 'transparent',
+        border: 'none', borderRadius: 12, padding: compact ? '6px 8px' : '6px 10px',
         color: active ? 'var(--accent-color)' : 'var(--text-muted)',
         cursor: disabled ? 'default' : 'pointer',
-        fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 500,
+        fontFamily: 'var(--font-body)', fontSize: 12.5, fontWeight: 600,
+        minWidth: compact ? 48 : 58,
       }}
     >
       {children}
@@ -273,15 +283,15 @@ function Feed() {
   return (
     <div>
       {isLoggedIn ? (
-        <div style={{ padding: 16, borderBottom: '1px solid var(--nav-border)' }}>
-          <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ padding: '12px 12px 10px', borderBottom: '1px solid var(--nav-border)' }}>
+          <div style={{ display: 'flex', gap: 10 }}>
               <Avatar url={myAvatar} fallback={user?.username || user?.wallet} />
             <div style={{ flex: 1 }}>
               <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="What's happening?"
-                style={{ width: '100%', minHeight: 50, border: 'none', padding: 0, background: 'transparent', fontSize: 15, resize: 'vertical' }}
+                style={{ width: '100%', minHeight: 48, border: 'none', padding: 0, background: 'transparent', fontSize: 15, resize: 'vertical' }}
               />
 
               {mediaPreview && (
@@ -297,7 +307,7 @@ function Feed() {
                 </div>
               )}
 
-              <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <input ref={fileInputRef} type="file" accept="image/*,video/*" onChange={handleFileSelect} style={{ display: 'none' }} />
                 <button
                   onClick={() => fileInputRef.current?.click()}
@@ -306,8 +316,8 @@ function Feed() {
                     background: 'transparent',
                     border: '1px solid var(--nav-border)',
                     borderRadius: '50%',
-                    width: 32,
-                    height: 32,
+                    width: 30,
+                    height: 30,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -315,7 +325,7 @@ function Feed() {
                     color: 'var(--accent-color)',
                   }}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                     <line x1="12" y1="5" x2="12" y2="19" />
                     <line x1="5" y1="12" x2="19" y2="12" />
                   </svg>
@@ -325,7 +335,7 @@ function Feed() {
                   disabled={posting || (!text.trim() && !mediaFile)}
                   style={{
                     background: 'var(--accent-color)', color: 'var(--bg-color)', border: 'none',
-                    borderRadius: 20, padding: '8px 20px', fontWeight: 600, fontFamily: 'var(--font-display)',
+                    borderRadius: 18, padding: '7px 16px', fontWeight: 600, fontFamily: 'var(--font-display)',
                     opacity: posting || (!text.trim() && !mediaFile) ? 0.5 : 1,
                   }}
                 >
@@ -350,12 +360,12 @@ function Feed() {
           const cState = commentState[post.id]
           const isLiked = likedMap[post.id]
           return (
-            <div key={post.id} style={{ padding: '16px', borderBottom: '1px solid var(--nav-border)' }}>
-              <div style={{ display: 'flex', gap: 12 }}>
+            <div key={post.id} style={{ padding: '10px 10px 8px', borderBottom: '1px solid var(--nav-border)' }}>
+              <div style={{ display: 'flex', gap: 10 }}>
                 <Avatar url={post.author?.avatarUrl} fallback={post.author?.username || post.author?.wallet} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <strong style={{ fontSize: 14.5 }}>{post.author?.username || post.author?.wallet}</strong>
-                  <p style={{ margin: '4px 0 10px', fontSize: 15, lineHeight: 1.45 }}>
+                  <p style={{ margin: '4px 0 7px', fontSize: 15, lineHeight: 1.4 }}>
                     {renderTextWithLinks(post.text || '')}
                   </p>
 
@@ -365,15 +375,27 @@ function Feed() {
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: 40, padding: '10px 0 4px', borderTop: '1px solid var(--nav-border)', marginTop: 4 }}>
-                    <ActionButton onClick={() => handleLike(post.id)} disabled={!isLoggedIn} active={isLiked}>
-                      <HeartIcon filled={isLiked} /> {post.likeCount}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      padding: '6px 0 2px',
+                      marginTop: 2,
+                    }}
+                  >
+                    <ActionButton onClick={() => handleLike(post.id)} disabled={!isLoggedIn} active={isLiked} compact>
+                      <HeartIcon filled={isLiked} /> {post.likeCount ?? 0}
                     </ActionButton>
-                    <ActionButton onClick={() => toggleComments(post.id)} active={cState?.open}>
-                      <CommentIcon /> {post.commentCount}
+                    <ActionButton onClick={() => toggleComments(post.id)} active={cState?.open} compact>
+                      <CommentIcon /> {post.commentCount ?? 0}
                     </ActionButton>
-                    <ActionButton onClick={() => setTippingPost(post)} disabled={!isLoggedIn}>
-                      <TipIcon /> {post.tipTotal}
+                    <ActionButton onClick={() => setTippingPost(post)} disabled={!isLoggedIn} compact>
+                      <TipIcon /> {post.tipTotal ?? 0}
+                    </ActionButton>
+                    <ActionButton disabled compact>
+                      <EyeIcon /> {post.viewCount ?? 0}
                     </ActionButton>
                   </div>
 
