@@ -1,37 +1,72 @@
 import { useState, useEffect } from 'react'
 import { getLeaderboard } from '../lib/api'
 
-function RankedList({ list, emptyLabel }) {
-  if (list.length === 0) {
-    return <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>{emptyLabel}</p>
-  }
+function LeaderboardTable({ title, list, emptyLabel }) {
   return (
-    <div>
-      {list.map((entry, i) => (
-        <div
-          key={entry.wallet || i}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 10,
-            padding: '10px 0',
-            borderBottom: i < list.length - 1 ? '1px solid var(--nav-border)' : 'none',
-          }}
-        >
-          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, color: 'var(--text-muted)', fontSize: 13 }}>
-            {i + 1}
-          </span>
-          <span style={{ fontSize: 14, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {entry.username || entry.wallet}
-          </span>
-          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 13.5, color: 'var(--accent-color)' }}>
-            {entry.total ?? entry.amount ?? entry.tipTotal} NIM
-          </span>
-        </div>
-      ))}
+    <div
+      style={{
+        flex: '1 1 260px',
+        minWidth: 240,
+        border: '1px solid var(--nav-border)',
+        borderRadius: 14,
+        overflow: 'hidden',
+      }}
+    >
+      <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--nav-border)' }}>
+        <h3 style={{ margin: 0, fontSize: 15 }}>{title}</h3>
+      </div>
+
+      {list.length === 0 ? (
+        <p style={{ color: 'var(--text-muted)', fontSize: 14, padding: 16, margin: 0 }}>
+          {emptyLabel}
+        </p>
+      ) : (
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th style={headStyle('left')}>Rank</th>
+              <th style={headStyle('left')}>User</th>
+              <th style={headStyle('right')}>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {list.map((entry, i) => (
+              <tr key={entry.wallet || i}>
+                <td style={cellStyle('left')}>{i + 1}</td>
+                <td style={{ ...cellStyle('left'), maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {entry.username || entry.wallet}
+                </td>
+                <td style={{ ...cellStyle('right'), color: 'var(--accent-color)', fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+                  {entry.total ?? entry.amount ?? entry.tipTotal} NIM
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   )
+}
+
+function headStyle(align) {
+  return {
+    textAlign: align,
+    fontSize: 12,
+    fontFamily: 'var(--font-display)',
+    fontWeight: 600,
+    color: 'var(--text-muted)',
+    padding: '8px 16px',
+    borderBottom: '1px solid var(--nav-border)',
+  }
+}
+
+function cellStyle(align) {
+  return {
+    textAlign: align,
+    fontSize: 14,
+    padding: '10px 16px',
+    borderBottom: '1px solid var(--nav-border)',
+  }
 }
 
 function Leaderboard() {
@@ -103,23 +138,9 @@ function Leaderboard() {
       {loading ? (
         <p style={{ color: 'var(--text-muted)' }}>Loading leaderboard...</p>
       ) : (
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: 48,
-            flexWrap: 'wrap',
-          }}
-        >
-          <div style={{ minWidth: 220, maxWidth: 260 }}>
-            <h3 style={{ fontSize: 15, marginBottom: 10 }}>Top Tippers</h3>
-            <RankedList list={topTippers} emptyLabel="No tips yet." />
-          </div>
-
-          <div style={{ minWidth: 220, maxWidth: 260 }}>
-            <h3 style={{ fontSize: 15, marginBottom: 10 }}>Top Earners</h3>
-            <RankedList list={topEarners} emptyLabel="No tips yet." />
-          </div>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 20, flexWrap: 'wrap', textAlign: 'left' }}>
+          <LeaderboardTable title="Top Tippers" list={topTippers} emptyLabel="No tips yet." />
+          <LeaderboardTable title="Top Earners" list={topEarners} emptyLabel="No tips yet." />
         </div>
       )}
     </div>

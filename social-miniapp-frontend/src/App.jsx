@@ -7,20 +7,54 @@ import Notifications from './pages/Notifications'
 import WalletConnect from './components/WalletConnect'
 import NimiqWatermark from './components/NimiqWatermark'
 
-function NavLink({ to, label }) {
+const NAV_ITEMS = [
+  { to: '/', label: 'Feed' },
+  { to: '/leaderboard', label: 'Leaderboard' },
+  { to: '/notifications', label: 'Notifications' },
+  { to: '/profile', label: 'Profile' },
+]
+
+function BottomNav() {
   const location = useLocation()
-  const active = location.pathname === to
+
   return (
-    <Link
-      to={to}
+    <nav
       style={{
-        color: active ? 'var(--accent-color)' : 'var(--text-muted)',
-        fontWeight: active ? 600 : 500,
-        fontSize: 13,
+        position: 'fixed',
+        bottom: 12,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: 'calc(100% - 32px)',
+        maxWidth: 528,
+        display: 'flex',
+        border: '1px solid var(--nav-border)',
+        borderRadius: 20,
+        padding: 4,
+        background: 'var(--bg-elevated)',
       }}
     >
-      {label}
-    </Link>
+      {NAV_ITEMS.map((item) => {
+        const active = location.pathname === item.to
+        return (
+          <Link
+            key={item.to}
+            to={item.to}
+            style={{
+              flex: 1,
+              textAlign: 'center',
+              padding: '8px 4px',
+              borderRadius: 16,
+              fontSize: 12.5,
+              fontWeight: 600,
+              background: active ? 'var(--accent-color)' : 'transparent',
+              color: active ? 'var(--bg-color)' : 'var(--text-muted)',
+            }}
+          >
+            {item.label}
+          </Link>
+        )
+      })}
+    </nav>
   )
 }
 
@@ -79,7 +113,7 @@ function App() {
           </button>
         </div>
 
-        <div style={{ paddingBottom: 70 }}>
+        <div style={{ paddingBottom: 90 }}>
           <Routes>
             <Route path="/" element={<Feed />} />
             <Route path="/profile" element={<Profile />} />
@@ -88,26 +122,7 @@ function App() {
           </Routes>
         </div>
 
-        <nav
-          style={{
-            position: 'fixed',
-            bottom: 0,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: '100%',
-            maxWidth: 560,
-            display: 'flex',
-            justifyContent: 'space-around',
-            padding: '14px 0',
-            borderTop: '1px solid var(--nav-border)',
-            backgroundColor: 'var(--bg-color)',
-          }}
-        >
-          <NavLink to="/" label="Feed" />
-          <NavLink to="/leaderboard" label="Leaderboard" />
-          <NavLink to="/notifications" label="Notifications" />
-          <NavLink to="/profile" label="Profile" />
-        </nav>
+        <BottomNav />
       </div>
     </BrowserRouter>
   )
