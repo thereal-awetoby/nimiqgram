@@ -6,6 +6,7 @@ import Leaderboard from './pages/Leaderboard'
 import Notifications from './pages/Notifications'
 import WalletConnect from './components/WalletConnect'
 import NimiqWatermark from './components/NimiqWatermark'
+import BouncingHexagon from './BouncingHexagon'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Feed', icon: 'home' },
@@ -16,12 +17,12 @@ const NAV_ITEMS = [
 
 function NavIcon({ type, active }) {
   const common = {
-    width: 15,
-    height: 15,
+    width: 18,
+    height: 18,
     viewBox: '0 0 24 24',
     fill: 'none',
-    stroke: active ? 'var(--bg-color)' : 'currentColor',
-    strokeWidth: 1.9,
+    stroke: active ? '#b6780a' : 'currentColor',
+    strokeWidth: 2,
     strokeLinecap: 'round',
     strokeLinejoin: 'round',
   }
@@ -75,9 +76,9 @@ function BottomNav() {
         width: 'min(100%, 560px)',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'space-around',
         gap: 0,
-        padding: '10px 8px 12px',
+        padding: '10px 14px 12px',
         borderTop: '1px solid var(--nav-border)',
         background: 'var(--bg-elevated)',
         zIndex: 50,
@@ -89,24 +90,21 @@ function BottomNav() {
           <Link
             key={item.to}
             to={item.to}
+            aria-label={item.label}
             style={{
-              flex: 1,
+              width: 42,
+              height: 42,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 6,
-              minHeight: 42,
-              padding: '8px 10px',
               borderRadius: 10,
-              background: active ? 'rgba(184, 121, 14, 0.12)' : 'transparent',
-              color: active ? 'var(--accent-color)' : 'var(--text-muted)',
+              background: active ? '#f7e5a9' : 'transparent',
+              color: active ? '#b6780a' : 'var(--text-muted)',
               transition: 'all 0.18s ease',
-              fontSize: 12.5,
-              fontWeight: 600,
+              boxShadow: active ? 'inset 0 0 0 1px rgba(182, 120, 10, 0.05)' : 'none',
             }}
           >
             <NavIcon type={item.icon} active={active} />
-            <span>{item.label}</span>
           </Link>
         )
       })}
@@ -124,7 +122,7 @@ function App() {
   }, [theme])
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setIsBooting(false), 1200)
+    const timer = window.setTimeout(() => setIsBooting(false), 4000)
     return () => window.clearTimeout(timer)
   }, [])
 
@@ -135,9 +133,7 @@ function App() {
   if (isBooting) {
     return (
       <div className="boot-screen">
-        <div className="boot-loader" aria-label="Loading app">
-          <div className="polygon-shape" />
-        </div>
+        <BouncingHexagon theme={theme} />
       </div>
     )
   }

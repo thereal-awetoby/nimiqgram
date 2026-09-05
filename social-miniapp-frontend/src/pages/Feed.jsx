@@ -21,7 +21,7 @@ function renderTextWithLinks(text) {
 
 function HeartIcon({ filled }) {
   return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
       <path d="M12 21s-7.5-4.6-10-9.3C.5 8 2.2 4.5 6 4a5.6 5.6 0 0 1 6 3 5.6 5.6 0 0 1 6-3c3.8.5 5.5 4 4 7.7C19.5 16.4 12 21 12 21z" />
     </svg>
   )
@@ -29,7 +29,7 @@ function HeartIcon({ filled }) {
 
 function CommentIcon() {
   return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M21 12a8 8 0 0 1-8 8H7l-4 3 1-4.5A8 8 0 1 1 21 12z" />
     </svg>
   )
@@ -37,7 +37,7 @@ function CommentIcon() {
 
 function TipIcon() {
   return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <circle cx="12" cy="12" r="9" />
       <path d="M12 7v10M9.5 9.3c0-1.1 1.1-2 2.5-2s2.5.7 2.5 1.8c0 2.5-5 1.7-5 4.2 0 1.1 1.1 1.9 2.5 1.9s2.5-.9 2.5-2" />
     </svg>
@@ -46,7 +46,7 @@ function TipIcon() {
 
 function EyeIcon() {
   return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
       <circle cx="12" cy="12" r="3" />
     </svg>
@@ -60,13 +60,14 @@ function ActionButton({ onClick, disabled, active, children, compact = false, co
       disabled={disabled}
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-        background: active ? 'rgba(242,169,59,0.06)' : 'transparent',
-        border: 'none', borderRadius: 12, padding: compact ? '6px 0' : '6px 8px',
-        color: color,
+        background: active ? 'rgba(184, 121, 14, 0.1)' : 'transparent',
+        border: 'none', borderRadius: 10, padding: compact ? '5px 0' : '5px 6px',
+        color: active ? '#b6780a' : color,
         cursor: disabled ? 'default' : 'pointer',
         fontFamily: 'var(--font-body)', fontSize: 12.5, fontWeight: 600,
-        minWidth: compact ? 42 : 52,
+        minWidth: compact ? 38 : 48,
         flex: 1,
+        lineHeight: 1,
       }}
     >
       {children}
@@ -411,9 +412,10 @@ function Feed() {
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       width: '100%',
-                      padding: '8px 4px 2px',
+                      padding: '6px 2px 0',
                       marginTop: 2,
                       borderTop: '1px solid var(--nav-border)',
+                      gap: 2,
                     }}
                   >
                     <ActionButton onClick={() => toggleComments(post.id)} active={cState?.open} compact color="var(--comment-accent)">
