@@ -1,6 +1,38 @@
 import { useState, useEffect } from 'react'
 import { getLeaderboard } from '../lib/api'
 
+function RankedList({ list, emptyLabel }) {
+  if (list.length === 0) {
+    return <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>{emptyLabel}</p>
+  }
+  return (
+    <div>
+      {list.map((entry, i) => (
+        <div
+          key={entry.wallet || i}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '10px 0',
+            borderBottom: i < list.length - 1 ? '1px solid var(--nav-border)' : 'none',
+          }}
+        >
+          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, color: 'var(--text-muted)', fontSize: 13, width: 16 }}>
+            {i + 1}
+          </span>
+          <span style={{ flex: 1, fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {entry.username || entry.wallet}
+          </span>
+          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 13.5, color: 'var(--accent-color)' }}>
+            {entry.total ?? entry.amount ?? entry.tipTotal} NIM
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function Leaderboard() {
   const [range, setRange] = useState('daily')
   const [topTippers, setTopTippers] = useState([])
@@ -28,57 +60,59 @@ function Leaderboard() {
         if (!cancelled) setLoading(false)
       })
 
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [range])
-
-  function renderList(list, emptyLabel) {
-    if (list.length === 0) {
-      return <p style={{ opacity: 0.6 }}>{emptyLabel}</p>
-    }
-    return (
-      <ol style={{ paddingLeft: 20 }}>
-        {list.map((entry, i) => (
-          <li key={entry.wallet || i} style={{ marginBottom: 8 }}>
-            <strong>{entry.username || entry.wallet}</strong>
-            {' — '}
-            {entry.total || entry.amount || entry.tipTotal} NIM
-          </li>
-        ))}
-      </ol>
-    )
-  }
 
   return (
     <div style={{ padding: 16 }}>
-      <h2>Leaderboard</h2>
+      <h2 style={{ margin: '0 0 16px' }}>Leaderboard</h2>
 
-      <div style={{ marginBottom: 16 }}>
-        <button
-          onClick={() => setRange('daily')}
-          disabled={range === 'daily'}
-          style={{ marginRight: 8 }}
-        >
-          Daily
-        </button>
-        <button onClick={() => setRange('weekly')} disabled={range === 'weekly'}>
-          Weekly
-        </button>
+      <div
+        style={{
+          display: 'inline-flex',
+          border: '1px solid var(--nav-border)',
+          borderRadius: 20,
+          padding: 3,
+          marginBottom: 24,
+        }}
+      >
+        {['daily', 'weekly'].map((r) => (
+          <button
+            key={r}
+            onClick={() => setRange(r)}
+            style={{
+              background: range === r ? 'var(--accent-color)' : 'transparent',
+              color: range === r ? 'var(--bg-color)' : 'var(--text-muted)',
+              border: 'none',
+              borderRadius: 18,
+              padding: '6px 18px',
+              fontFamily: 'var(--font-display)',
+              fontWeight: 600,
+              fontSize: 13,
+              textTransform: 'capitalize',
+            }}
+          >
+            {r}
+          </button>
+        ))}
       </div>
 
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {error && <p style={{ color: '#e0245e' }}>{error}</p>}
 
       {loading ? (
-        <p>Loading leaderboard...</p>
+        <p style={{ color: 'var(--text-muted)' }}>Loading leaderboard...</p>
       ) : (
-        <>
-          <h3>🏆 Top Tippers</h3>
-          {renderList(topTippers, 'No tips yet.')}
+        <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 220px', minWidth: 220 }}>
+            <h3 style={{ fontSize: 15, marginBottom: 10 }}>Top Tippers</h3>
+            <RankedList list={topTippers} emptyLabel="No tips yet." />
+          </div>
 
-          <h3>💰 Top Earners</h3>
-          {renderList(topEarners, 'No tips yet.')}
-        </>
+          <div style={{ flex: '1 1 220px', minWidth: 220 }}>
+            <h3 style={{ fontSize: 15, marginBottom: 10 }}>Top Earners</h3>
+            <RankedList list={topEarners} emptyLabel="No tips yet." />
+          </div>
+        </div>
       )}
     </div>
   )
