@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { getNotifications, markNotificationsRead } from '../lib/api'
+import LoadingHexagon from '../components/LoadingHexagon'
 
 function Notifications() {
   const { token, isLoggedIn } = useAuth()
@@ -76,7 +77,7 @@ function Notifications() {
       {error && <p style={{ color: '#e0245e' }}>{error}</p>}
 
       {loading ? (
-        <p style={{ color: 'var(--text-muted)' }}>Loading...</p>
+        <LoadingHexagon label="Loading notifications" />
       ) : notifications.length === 0 ? (
         <p style={{ color: 'var(--text-muted)' }}>No notifications yet.</p>
       ) : (

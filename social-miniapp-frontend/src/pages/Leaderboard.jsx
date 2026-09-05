@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getLeaderboard } from '../lib/api'
+import LoadingHexagon from '../components/LoadingHexagon'
 
 function LeaderboardTable({ title, list, emptyLabel }) {
   return (
@@ -136,7 +137,7 @@ function Leaderboard() {
       {error && <p style={{ color: '#e0245e' }}>{error}</p>}
 
       {loading ? (
-        <p style={{ color: 'var(--text-muted)' }}>Loading leaderboard...</p>
+        <LoadingHexagon label="Loading leaderboard" />
       ) : (
         <div style={{ display: 'flex', justifyContent: 'center', gap: 20, flexWrap: 'wrap', textAlign: 'left' }}>
           <LeaderboardTable title="Top Tippers" list={topTippers} emptyLabel="No tips yet." />

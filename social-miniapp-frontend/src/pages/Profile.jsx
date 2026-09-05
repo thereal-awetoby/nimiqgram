@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { getProfile, updateProfile, getStreaks, getFollowing } from '../lib/api'
 import { uploadMedia } from '../lib/upload'
 import Avatar from '../components/Avatar'
+import LoadingHexagon from '../components/LoadingHexagon'
 
 function Profile() {
   const { user, token, isLoggedIn } = useAuth()
@@ -12,6 +13,7 @@ function Profile() {
   const [avatarUrl, setAvatarUrl] = useState('')
   const [status, setStatus] = useState('idle')
   const [error, setError] = useState(null)
+  const [profileLoading, setProfileLoading] = useState(true)
   const [mode, setMode] = useState('view') // 'view' | 'edit'
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const fileInputRef = useRef(null)
@@ -24,6 +26,7 @@ function Profile() {
   useEffect(() => {
     if (!user?.wallet) return
 
+    setProfileLoading(true)
     getProfile(user.wallet)
       .then((profile) => {
         setDisplayName(profile.displayName || profile.username || '')
@@ -33,6 +36,7 @@ function Profile() {
         setMode(profile.username ? 'view' : 'edit')
       })
       .catch((err) => console.error(err))
+      .finally(() => setProfileLoading(false))
 
     setStreakLoading(true)
     getStreaks(user.wallet)
@@ -83,6 +87,10 @@ function Profile() {
         Connect your wallet to edit your profile.
       </div>
     )
+  }
+
+  if (profileLoading) {
+    return <LoadingHexagon label="Loading profile" />
   }
 
   return (
@@ -235,7 +243,7 @@ function Profile() {
       <div style={{ marginBottom: 24 }}>
         <h3 style={{ fontSize: 15, marginBottom: 12, textAlign: 'left' }}>Following</h3>
         {followingLoading ? (
-          <p style={{ color: 'var(--text-muted)', margin: 0 }}>Loading...</p>
+          <LoadingHexagon label="Loading following" />
         ) : following.length === 0 ? (
           <p style={{ color: 'var(--text-muted)', margin: 0 }}>Not following anyone yet.</p>
         ) : (
@@ -257,7 +265,7 @@ function Profile() {
       <h3 style={{ fontSize: 15, marginBottom: 16 }}>Activity</h3>
 
       {streakLoading ? (
-        <p style={{ color: 'var(--text-muted)' }}>Loading...</p>
+        <LoadingHexagon label="Loading activity" />
       ) : streakData ? (
         <div>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 32, marginBottom: 20 }}>

@@ -4,6 +4,7 @@ import { getFeed, createPost, toggleLike, addComment, getPost, getProfile, recor
 import { uploadMedia, getMediaType } from '../lib/upload'
 import TipModal from '../components/TipModal'
 import Avatar from '../components/Avatar'
+import LoadingHexagon from '../components/LoadingHexagon'
 
 const MAX_VIDEO_SECONDS = 5 * 60
 const URL_REGEX = /(https?:\/\/[^\s]+)/g
@@ -454,7 +455,7 @@ function Feed() {
       )}
 
       {loading ? (
-        <p style={{ padding: 16, color: 'var(--text-muted)' }}>Loading feed...</p>
+        <LoadingHexagon label="Loading feed" />
       ) : posts.length === 0 ? (
         <p style={{ padding: 16, color: 'var(--text-muted)' }}>No posts yet — be the first!</p>
       ) : (
@@ -510,7 +511,7 @@ function Feed() {
                   {cState?.open && (
                     <div style={{ marginTop: 12, paddingLeft: 12, borderLeft: '2px solid var(--nav-border)' }}>
                       {cState.loading ? (
-                        <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading comments...</p>
+                        <LoadingHexagon label="Loading comments" />
                       ) : cState.comments.length === 0 ? (
                         <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>No comments yet.</p>
                       ) : (
