@@ -92,18 +92,19 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const challenge = getChallenge(result.data.wallet);
-    if (!challenge || !(await verifyWalletSignature(challenge, result.data))) {
+    const verifiedWallet = challenge ? await verifyWalletSignature(challenge, result.data) : undefined;
+    if (!verifiedWallet) {
       return reply.unauthorized("invalid or expired wallet signature");
     }
     consumeChallenge(result.data.wallet);
     await pool.query(
       `insert into users (wallet) values ($1) on conflict (wallet) do nothing`,
-      [result.data.wallet]
+      [verifiedWallet]
     );
 
     return {
-      token: issueSession({ wallet: result.data.wallet, username: null }),
-      user: { wallet: result.data.wallet, username: null }
+      token: issueSession({ wallet: verifiedWallet, username: null }),
+      user: { wallet: verifiedWallet, username: null }
     };
   });
 
