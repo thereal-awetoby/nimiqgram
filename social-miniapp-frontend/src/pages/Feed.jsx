@@ -474,15 +474,17 @@ function Feed() {
                     <strong style={{ fontSize: 14.5 }}>{post.author?.displayName || post.author?.username || post.author?.wallet}</strong>
                     {post.author?.username && <span style={{ color: 'var(--accent-color)', fontSize: 12, marginLeft: 6 }}>@{post.author.username}</span>}
                   </Link>
-                  <p style={{ margin: '4px 0 7px', fontSize: 15, lineHeight: 1.4 }}>
-                    {renderTextWithLinks(post.text || '')}
-                  </p>
+                  <Link to={`/post/${post.id}`} style={{ display: 'block', color: 'inherit' }}>
+                    <p style={{ margin: '4px 0 7px', fontSize: 15, lineHeight: 1.4 }}>
+                      {renderTextWithLinks(post.text || '')}
+                    </p>
 
-                  {post.mediaUrl && (
-                    <div style={{ marginBottom: 10 }}>
-                      <PostMedia url={post.mediaUrl} type={post.mediaType} />
-                    </div>
-                  )}
+                    {post.mediaUrl && (
+                      <div style={{ marginBottom: 10 }} onClick={(event) => event.preventDefault()}>
+                        <PostMedia url={post.mediaUrl} type={post.mediaType} />
+                      </div>
+                    )}
+                  </Link>
 
                   <div
                     style={{
@@ -556,7 +558,10 @@ function Feed() {
         <TipModal
           post={tippingPost}
           onClose={() => setTippingPost(null)}
-          onSuccess={() => { setTippingPost(null); loadFeed() }}
+          onSuccess={(result) => {
+            setPosts((prev) => prev.map((post) => post.id === tippingPost.id ? { ...post, tipTotal: result.status === 'verified' ? (Number(post.tipTotal || 0) + Number(result.amount || 0)).toString() : post.tipTotal } : post))
+            setTippingPost(null)
+          }}
         />
       )}
     </div>

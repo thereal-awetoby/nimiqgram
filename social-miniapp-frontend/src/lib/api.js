@@ -137,3 +137,15 @@ export function markNotificationsRead(token, ids) {
 export function getStreaks(wallet) {
   return request(`/streaks/${wallet}`)
 }
+
+export function searchApp(query) {
+  return request(`/search?q=${encodeURIComponent(query)}`)
+}
+
+export function getProfilePosts(wallet) { return request(`/users/${wallet}/posts`) }
+export function getProfileLikes(wallet) { return request(`/users/${wallet}/likes`) }
+export function getTipActivity(wallet) { return request(`/users/${wallet}/tip-activity`) }
+export function getBookmarks(wallet, token) { return authedRequest(`/users/${wallet}/bookmarks`, token) }
+export function bookmarkPost(postId, token) { return authedRequest(`/posts/${postId}/bookmark`, token, { method: 'POST', body: JSON.stringify({}) }) }
+export function removeBookmark(postId, token) { return authedRequest(`/posts/${postId}/bookmark`, token, { method: 'DELETE' }) }
+export function getBookmarkStatus(postId, token) { return token ? authedRequest(`/posts/${postId}/bookmark`, token) : Promise.resolve({ bookmarked: false }) }

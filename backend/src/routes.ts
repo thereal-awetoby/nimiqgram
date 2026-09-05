@@ -75,6 +75,34 @@ async function recordActivity(wallet: string): Promise<void> {
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
   app.get("/health", async () => ({ status: "ok" }));
 
+  app.get("/search", async (request, reply) => {
+    const query = request.query as { q?: string };
+    const term = query.q?.trim();
+    if (!term) return { people: [], posts: [] };
+    if (term.length > 80) return reply.badRequest("search query is too long");
+    const pattern = `%${term}%`;
+    const [people, posts] = await Promise.all([
+      pool.query(
+        `select wallet, display_name, username, bio, avatar_url
+         from users
+         where display_name ilike $1 or username ilike $1 or wallet ilike $1
+         order by username nulls last, created_at desc limit 20`,
+        [pattern]
+      ),
+      pool.query(
+        `select p.id, p.text, p.created_at, u.wallet as author_wallet, u.display_name, u.username, u.avatar_url
+         from posts p join users u on u.wallet = p.author_wallet
+         where p.text ilike $1
+         order by p.created_at desc limit 30`,
+        [pattern]
+      )
+    ]);
+    return {
+      people: people.rows.map((row: Record<string, any>) => ({ wallet: row.wallet, displayName: row.display_name, username: row.username, bio: row.bio, avatarUrl: row.avatar_url })),
+      posts: posts.rows.map((row: Record<string, any>) => ({ id: row.id, text: row.text, createdAt: row.created_at, author: { wallet: row.author_wallet, displayName: row.display_name, username: row.username, avatarUrl: row.avatar_url } }))
+    };
+  });
+
   app.post("/auth/challenge", async (request, reply) => {
     const result = walletSchema.safeParse(request.body);
     if (!result.success) {
@@ -124,6 +152,48 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     return { wallet: row.wallet, displayName: row.display_name, username: row.username, bio: row.bio, avatarUrl: row.avatar_url, badges: row.badges, streak: row.streak };
   });
 
+  app.get("/users/:wallet/posts", async (request) => {
+    const params = request.params as { wallet: string };
+    const result = await pool.query(
+      `select p.id, p.text, p.media_url, p.media_type, p.created_at, u.wallet as author_wallet, u.display_name, u.username, u.avatar_url
+       from posts p join users u on u.wallet = p.author_wallet where p.author_wallet = $1 order by p.created_at desc limit 50`,
+      [params.wallet]
+    );
+    return { posts: result.rows.map((row: Record<string, any>) => ({ id: row.id, text: row.text, mediaUrl: row.media_url, mediaType: row.media_type, createdAt: row.created_at, author: { wallet: row.author_wallet, displayName: row.display_name, username: row.username, avatarUrl: row.avatar_url } })) };
+  });
+
+  app.get("/users/:wallet/likes", async (request) => {
+    const params = request.params as { wallet: string };
+    const result = await pool.query(
+      `select p.id, p.text, p.media_url, p.media_type, p.created_at, u.wallet as author_wallet, u.display_name, u.username, u.avatar_url
+       from likes l join posts p on p.id = l.post_id join users u on u.wallet = p.author_wallet where l.wallet = $1 order by l.created_at desc limit 50`,
+      [params.wallet]
+    );
+    return { posts: result.rows.map((row: Record<string, any>) => ({ id: row.id, text: row.text, mediaUrl: row.media_url, mediaType: row.media_type, createdAt: row.created_at, author: { wallet: row.author_wallet, displayName: row.display_name, username: row.username, avatarUrl: row.avatar_url } })) };
+  });
+
+  app.get("/users/:wallet/tip-activity", async (request) => {
+    const params = request.params as { wallet: string };
+    const result = await pool.query(
+      `select t.id, t.amount_nim::text as amount, t.status, t.created_at, t.to_wallet, u.display_name, u.username
+       from tips t join users u on u.wallet = t.to_wallet where t.from_wallet = $1 order by t.created_at desc limit 50`,
+      [params.wallet]
+    );
+    return { tips: result.rows };
+  });
+
+  app.get("/users/:wallet/bookmarks", async (request, reply) => {
+    const session = getSession(request);
+    const params = request.params as { wallet: string };
+    if (!session || session.wallet !== params.wallet) return reply.unauthorized();
+    const result = await pool.query(
+      `select p.id, p.text, p.media_url, p.media_type, p.created_at, u.wallet as author_wallet, u.display_name, u.username, u.avatar_url
+       from bookmarks b join posts p on p.id = b.post_id join users u on u.wallet = p.author_wallet where b.wallet = $1 order by b.created_at desc limit 50`,
+      [params.wallet]
+    );
+    return { posts: result.rows.map((row: Record<string, any>) => ({ id: row.id, text: row.text, mediaUrl: row.media_url, mediaType: row.media_type, createdAt: row.created_at, author: { wallet: row.author_wallet, displayName: row.display_name, username: row.username, avatarUrl: row.avatar_url } })) };
+  });
+
   app.get("/users/:wallet/following", async (request, reply) => {
     const params = request.params as { wallet: string };
     const result = await pool.query(
@@ -169,6 +239,30 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       [session.wallet, params.wallet]
     );
     return { following: true, wallet: params.wallet };
+  });
+
+  app.post("/posts/:id/bookmark", async (request, reply) => {
+    const session = getSession(request);
+    if (!session) return reply.unauthorized();
+    const params = request.params as { id: string };
+    await pool.query(`insert into bookmarks (wallet, post_id) values ($1, $2) on conflict do nothing`, [session.wallet, params.id]);
+    return { bookmarked: true };
+  });
+
+  app.get("/posts/:id/bookmark", async (request) => {
+    const session = getSession(request);
+    if (!session) return { bookmarked: false };
+    const params = request.params as { id: string };
+    const result = await pool.query(`select exists(select 1 from bookmarks where wallet = $1 and post_id = $2) as bookmarked`, [session.wallet, params.id]);
+    return { bookmarked: Boolean(result.rows[0]?.bookmarked) };
+  });
+
+  app.delete("/posts/:id/bookmark", async (request, reply) => {
+    const session = getSession(request);
+    if (!session) return reply.unauthorized();
+    const params = request.params as { id: string };
+    await pool.query(`delete from bookmarks where wallet = $1 and post_id = $2`, [session.wallet, params.id]);
+    return { bookmarked: false };
   });
 
   app.delete("/users/:wallet/follow", async (request, reply) => {

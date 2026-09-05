@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getProfile, updateProfile, getStreaks, getFollowing, getFollowStatus, followUser, unfollowUser } from '../lib/api'
+import { getProfile, updateProfile, getStreaks, getFollowing, getFollowStatus, followUser, unfollowUser, getProfilePosts, getProfileLikes, getTipActivity, getBookmarks } from '../lib/api'
 import { uploadMedia } from '../lib/upload'
 import Avatar from '../components/Avatar'
 import LoadingHexagon from '../components/LoadingHexagon'
@@ -28,6 +28,9 @@ function Profile() {
   const [followingLoading, setFollowingLoading] = useState(true)
   const [isFollowing, setIsFollowing] = useState(false)
   const [followLoading, setFollowLoading] = useState(false)
+  const [profileTab, setProfileTab] = useState('posts')
+  const [tabData, setTabData] = useState({ posts: [], likes: [], tips: [], bookmarks: [] })
+  const [tabLoading, setTabLoading] = useState(true)
 
   useEffect(() => {
     if (!targetWallet) return
@@ -65,6 +68,17 @@ function Profile() {
         .then((data) => setIsFollowing(Boolean(data.following)))
         .catch((err) => console.error(err))
     }
+
+    setTabLoading(true)
+    Promise.all([
+      getProfilePosts(targetWallet),
+      getProfileLikes(targetWallet),
+      getTipActivity(targetWallet),
+      isOwnProfile && isLoggedIn ? getBookmarks(targetWallet, token) : Promise.resolve({ posts: [] })
+    ])
+      .then(([posts, likes, tips, bookmarks]) => setTabData({ posts: posts.posts || [], likes: likes.posts || [], tips: tips.tips || [], bookmarks: bookmarks.posts || [] }))
+      .catch((err) => setError(err.message))
+      .finally(() => setTabLoading(false))
   }, [targetWallet, isOwnProfile, isLoggedIn, token])
 
   async function toggleFollow() {
@@ -268,76 +282,27 @@ function Profile() {
         </div>
       )}
 
-      <hr style={{ border: 'none', borderTop: '1px solid var(--nav-border)', margin: '32px 0' }} />
+      <hr style={{ border: 'none', borderTop: '1px solid var(--nav-border)', margin: '32px 0 18px' }} />
 
-      {isOwnProfile && <div style={{ marginBottom: 24 }}>
-        <h3 style={{ fontSize: 15, marginBottom: 12, textAlign: 'left' }}>Following</h3>
-        {followingLoading ? (
-          <LoadingHexagon label="Loading following" />
-        ) : following.length === 0 ? (
-          <p style={{ color: 'var(--text-muted)', margin: 0 }}>Not following anyone yet.</p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, textAlign: 'left' }}>
-            {following.map((person) => (
-              <div key={person.wallet} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', border: '1px solid var(--nav-border)', borderRadius: 12 }}>
-                <Avatar url={person.avatarUrl} fallback={person.username || person.wallet} size={28} />
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: 13 }}>{person.displayName || person.username || person.wallet}</div>
-                  {person.username && <div style={{ color: 'var(--accent-color)', fontSize: 11 }}>@{person.username}</div>}
-                  {person.bio && <div style={{ color: 'var(--text-muted)', fontSize: 11, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{person.bio}</div>}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>}
+      <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--nav-border)', marginBottom: 18 }}>
+        {[['posts', 'Posts'], ['activity', 'Activity'], ['likes', 'Likes'], ...(isOwnProfile ? [['bookmarks', 'Bookmarks']] : [])].map(([value, label]) => (
+          <button key={value} onClick={() => setProfileTab(value)} style={{ flex: 1, padding: '9px 4px', background: 'transparent', border: 'none', borderBottom: profileTab === value ? '2px solid var(--accent-color)' : '2px solid transparent', color: profileTab === value ? 'var(--accent-color)' : 'var(--text-muted)', fontSize: 12, fontWeight: 700 }}>{label}</button>
+        ))}
+      </div>
 
-      <h3 style={{ fontSize: 15, marginBottom: 16 }}>Activity</h3>
-
-      {streakLoading ? (
-        <LoadingHexagon label="Loading activity" />
-      ) : streakData ? (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 32, marginBottom: 20 }}>
+      {tabLoading ? <LoadingHexagon label="Loading profile content" /> : (
+        <div style={{ textAlign: 'left' }}>
+          {profileTab === 'activity' ? (
             <div>
-              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--accent-color)' }}>
-                {streakData.currentStreak}
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Current streak</div>
+              {streakLoading ? <LoadingHexagon label="Loading activity" /> : <div style={{ display: 'flex', justifyContent: 'center', gap: 32, marginBottom: 18 }}><div><strong style={{ color: 'var(--accent-color)', fontSize: 22 }}>{streakData?.currentStreak || 0}</strong><div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Current streak</div></div><div><strong style={{ color: 'var(--accent-color)', fontSize: 22 }}>{streakData?.longestStreak || 0}</strong><div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Longest streak</div></div></div>}
+              {tabData.tips.length === 0 ? <p style={{ color: 'var(--text-muted)' }}>No tips sent yet.</p> : tabData.tips.map((tip) => <div key={tip.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--nav-border)' }}>Tipped <strong>{tip.display_name || tip.username || tip.to_wallet}</strong> <span style={{ color: 'var(--accent-color)' }}>{tip.amount} NIM</span><div style={{ color: 'var(--text-muted)', fontSize: 11 }}>{tip.status}</div></div>)}
             </div>
-            <div>
-              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--accent-color)' }}>
-                {streakData.longestStreak}
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Longest streak</div>
-            </div>
-          </div>
-
-          {streakData.badges && streakData.badges.length > 0 ? (
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-              {streakData.badges.map((badge, i) => (
-                <span
-                  key={i}
-                  style={{
-                    border: '1px solid var(--accent-color)',
-                    color: 'var(--accent-color)',
-                    borderRadius: 14,
-                    padding: '5px 14px',
-                    fontSize: 12.5,
-                    fontFamily: 'var(--font-display)',
-                    fontWeight: 600,
-                  }}
-                >
-                  {typeof badge === 'string' ? badge : badge.name || JSON.stringify(badge)}
-                </span>
-              ))}
-            </div>
+          ) : profileTab === 'bookmarks' ? (
+            tabData.bookmarks.length === 0 ? <p style={{ color: 'var(--text-muted)' }}>No bookmarks yet.</p> : tabData.bookmarks.map((post) => <div key={post.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--nav-border)' }}>{post.text}</div>)
           ) : (
-            <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>No badges yet.</p>
+            (tabData[profileTab] || []).length === 0 ? <p style={{ color: 'var(--text-muted)' }}>{profileTab === 'likes' ? 'No liked posts yet.' : 'No posts yet.'}</p> : (tabData[profileTab] || []).map((post) => <div key={post.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--nav-border)' }}><div style={{ fontSize: 14, lineHeight: 1.4 }}>{post.text}</div><div style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 4 }}>{post.author?.displayName || post.author?.username || post.author?.wallet}</div></div>)
           )}
         </div>
-      ) : (
-        <p style={{ color: 'var(--text-muted)' }}>No streak data yet.</p>
       )}
     </div>
   )
