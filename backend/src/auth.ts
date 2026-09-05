@@ -35,7 +35,13 @@ export function createChallenge(wallet: string): AuthChallenge {
 }
 
 export async function verifyWalletSignature(challenge: AuthChallenge, request: AuthVerifyRequest): Promise<boolean> {
-  if (challenge.wallet !== request.wallet || Date.parse(challenge.expiresAt) <= Date.now()) {
+  const walletSuffix = request.wallet.slice(-6);
+  if (challenge.wallet !== request.wallet) {
+    console.warn({ walletSuffix, reason: "challenge-wallet-mismatch" }, "Wallet verification rejected");
+    return false;
+  }
+  if (Date.parse(challenge.expiresAt) <= Date.now()) {
+    console.warn({ walletSuffix, reason: "challenge-expired" }, "Wallet verification rejected");
     return false;
   }
 
@@ -44,12 +50,16 @@ export async function verifyWalletSignature(challenge: AuthChallenge, request: A
   }
 
   if (!config.NIMIQ_RPC_URL || !request.publicKey) {
+    console.warn({ walletSuffix, hasRpcUrl: Boolean(config.NIMIQ_RPC_URL), hasPublicKey: Boolean(request.publicKey), reason: "missing-rpc-or-public-key" }, "Wallet verification rejected");
     return false;
   }
 
   try {
     const derivedWallet = Address.fromPublicKeys([PublicKey.fromAny(request.publicKey)], 1).toUserFriendlyAddress();
-    if (derivedWallet !== request.wallet) return false;
+    if (derivedWallet !== request.wallet) {
+      console.warn({ walletSuffix, derivedSuffix: derivedWallet.slice(-6), reason: "public-key-wallet-mismatch" }, "Wallet verification rejected");
+      return false;
+    }
     const response = await fetch(config.NIMIQ_RPC_URL, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -60,10 +70,16 @@ export async function verifyWalletSignature(challenge: AuthChallenge, request: A
         params: { message: challenge.message, publicKey: request.publicKey, signature: request.signature, isHex: false }
       })
     });
-    if (!response.ok) return false;
+    if (!response.ok) {
+      console.warn({ walletSuffix, status: response.status, reason: "rpc-http-error" }, "Wallet verification rejected");
+      return false;
+    }
     const result = await response.json() as { result?: { bool?: boolean } | boolean };
-    return typeof result.result === "boolean" ? result.result : result.result?.bool === true;
-  } catch {
+    const verified = typeof result.result === "boolean" ? result.result : result.result?.bool === true;
+    if (!verified) console.warn({ walletSuffix, reason: "rpc-signature-rejected" }, "Wallet verification rejected");
+    return verified;
+  } catch (error) {
+    console.warn({ walletSuffix, reason: "rpc-request-failed", error: error instanceof Error ? error.message : "unknown" }, "Wallet verification rejected");
     return false;
   }
 }
