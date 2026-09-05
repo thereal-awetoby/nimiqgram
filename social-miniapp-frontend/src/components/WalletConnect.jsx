@@ -15,12 +15,33 @@ function WalletConnect() {
   async function handleConnect() {
     setStatus('connecting')
     setError(null)
+
     try {
-      const fakeWallet = 'NQ07 DEV0 0000 0000 0000 0000 0000 0000 0000'
-      await getChallenge(fakeWallet)
+      const { init } = await import('@nimiq/mini-app-sdk')
+
+      const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Open this app inside Nimiq Pay to connect your wallet.')), 8000)
+      )
+
+      const nimiq = await Promise.race([init(), timeout])
+
+      const accounts = await nimiq.listAccounts()
+      if (accounts?.error) throw new Error(accounts.error.message || 'Could not list accounts')
+      const wallet = accounts?.[0]
+      if (!wallet) throw new Error('No wallet account found.')
+
       setStatus('signing')
-      const fakeSignature = `dev:${fakeWallet}`
-      const authResult = await verifyAuth({ wallet: fakeWallet, signature: fakeSignature })
+      const challenge = await getChallenge(wallet)
+
+      const sigResult = await nimiq.sign(challenge.message)
+      if (sigResult?.error) throw new Error(sigResult.error.message || 'Signing failed or was rejected')
+
+      const authResult = await verifyAuth({
+        wallet,
+        publicKey: sigResult.publicKey,
+        signature: sigResult.signature,
+      })
+
       login(authResult)
       setStatus('connected')
     } catch (err) {
@@ -70,8 +91,8 @@ function WalletConnect() {
           cursor: status === 'connecting' || status === 'signing' ? 'default' : 'pointer',
         }}
       >
-        {status === 'connecting' && 'Requesting...'}
-        {status === 'signing' && 'Verifying...'}
+        {status === 'connecting' && 'Connecting...'}
+        {status === 'signing' && 'Confirm in Nimiq Pay...'}
         {(status === 'idle' || status === 'error') && 'Connect Wallet'}
       </button>
       {error && <p style={{ color: '#e0245e', fontSize: 12, marginTop: 6 }}>{error}</p>}
