@@ -4,3 +4,4 @@ shipping and moving
 building 
 fixing 
 doing more of fixing
+wallet connection fix done 
