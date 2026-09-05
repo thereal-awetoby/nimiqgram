@@ -4,12 +4,15 @@ import Feed from './pages/Feed'
 import Profile from './pages/Profile'
 import Leaderboard from './pages/Leaderboard'
 import Notifications from './pages/Notifications'
+import Search from './pages/Search'
+import Post from './pages/Post'
 import WalletConnect from './components/WalletConnect'
 import NimiqWatermark from './components/NimiqWatermark'
 import BouncingHexagon from './BouncingHexagon'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Feed', icon: 'home' },
+  { to: '/search', label: 'Search', icon: 'search' },
   { to: '/leaderboard', label: 'Leaderboard', icon: 'chart' },
   { to: '/notifications', label: 'Notifications', icon: 'bell' },
   { to: '/profile', label: 'Profile', icon: 'user' },
@@ -56,6 +59,13 @@ function NavIcon({ type, active }) {
         <svg {...common}>
           <circle cx="12" cy="8" r="4" />
           <path d="M4 19c1.5-3 5-4.5 8-4.5s6.5 1.5 8 4.5" />
+        </svg>
+      )
+    case 'search':
+      return (
+        <svg {...common}>
+          <circle cx="10.5" cy="10.5" r="6.5" />
+          <path d="m16 16 5 5" />
         </svg>
       )
     default:
@@ -188,6 +198,8 @@ function App() {
             <Route path="/profile/:wallet" element={<Profile />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/notifications" element={<Notifications />} />
+            <Route path="/search" element={<Search />} />
+            <Route path="/post/:postId" element={<Post />} />
           </Routes>
         </div>
 
