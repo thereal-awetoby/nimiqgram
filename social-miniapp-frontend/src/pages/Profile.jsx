@@ -58,6 +58,7 @@ function Profile() {
     setError(null)
     try {
       const uploaded = await uploadMedia(file)
+      if (!uploaded.url) throw new Error('Image upload did not return a public URL.')
       setAvatarUrl(uploaded.url)
     } catch (err) {
       console.error(err)
@@ -68,6 +69,7 @@ function Profile() {
   }
 
   async function handleSave() {
+    if (uploadingAvatar) return
     setStatus('saving')
     setError(null)
     try {
@@ -202,7 +204,7 @@ function Profile() {
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
             <button
               onClick={handleSave}
-              disabled={status === 'saving'}
+              disabled={status === 'saving' || uploadingAvatar}
               style={{
                 background: 'var(--accent-color)',
                 color: 'var(--bg-color)',
@@ -211,10 +213,10 @@ function Profile() {
                 padding: '9px 28px',
                 fontFamily: 'var(--font-display)',
                 fontWeight: 600,
-                opacity: status === 'saving' ? 0.6 : 1,
+                opacity: status === 'saving' || uploadingAvatar ? 0.6 : 1,
               }}
             >
-              {status === 'saving' ? 'Saving...' : 'Save Profile'}
+              {uploadingAvatar ? 'Uploading...' : status === 'saving' ? 'Saving...' : 'Save Profile'}
             </button>
 
             {username && (
