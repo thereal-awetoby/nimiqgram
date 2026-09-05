@@ -81,7 +81,7 @@ export async function verifyWalletSignature(challenge: AuthChallenge, request: A
   // raw message bytes.
   let signature: Signature;
   try {
-    signature = Signature.fromAny(request.signature);
+    signature = Signature.fromHex(request.signature);
   } catch (error) {
     console.warn({ walletSuffix, reason: "invalid-signature-encoding", error: error instanceof Error ? error.message : "unknown" }, "Wallet verification rejected");
     return undefined;
