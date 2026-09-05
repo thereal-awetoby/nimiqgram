@@ -67,7 +67,7 @@ function Profile() {
     setStatus('saving')
     setError(null)
     try {
-      await updateProfile(token, { displayName, username, bio, avatarUrl })
+      await updateProfile(token, { displayName, username, bio, avatarUrl: avatarUrl.trim() || null })
       setStatus('saved')
       setMode('view')
     } catch (err) {
@@ -155,7 +155,6 @@ function Profile() {
               ref={fileInputRef}
               type="file"
               accept="image/*"
-              capture="environment"
               onChange={handleAvatarSelect}
               style={{ display: 'none' }}
             />

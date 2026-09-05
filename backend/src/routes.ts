@@ -6,7 +6,7 @@ import { verifyTipTransaction } from "./nimiq-rpc.js";
 
 const walletSchema = z.object({ wallet: z.string().min(1).max(128) });
 const verifySchema = walletSchema.extend({ signature: z.string().min(1), publicKey: z.string().min(1).optional() });
-const profileSchema = z.object({ displayName: z.string().trim().min(1).max(64).optional(), username: z.string().trim().min(1).max(32), bio: z.string().max(280), avatarUrl: z.string().url().nullable().optional() });
+const profileSchema = z.object({ displayName: z.string().trim().min(1).max(64).optional(), username: z.string().trim().min(1).max(32), bio: z.string().max(280), avatarUrl: z.preprocess((value) => value === '' ? null : value, z.string().url().nullable().optional()) });
 const postSchema = z.object({
   text: z.string().trim().min(1).max(5000),
   mediaUrl: z.string().url().max(2048).nullable().optional(),
