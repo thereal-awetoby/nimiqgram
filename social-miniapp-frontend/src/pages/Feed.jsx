@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { getFeed, createPost, toggleLike, addComment, getPost } from '../lib/api'
 import { uploadMedia, getMediaType } from '../lib/upload'
 import TipModal from '../components/TipModal'
+import Avatar from '../components/Avatar'
 
 const MAX_VIDEO_SECONDS = 5 * 60
 const URL_REGEX = /(https?:\/\/[^\s]+)/g
@@ -15,27 +16,6 @@ function renderTextWithLinks(text) {
     ) : (
       <span key={i}>{part}</span>
     )
-  )
-}
-
-function Avatar({ url, fallback }) {
-  return url ? (
-    <img
-      src={url}
-      alt=""
-      style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-    />
-  ) : (
-    <div
-      style={{
-        width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
-        background: 'var(--bg-elevated)', border: '1px solid var(--nav-border)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 15,
-      }}
-    >
-      {(fallback || '?').slice(0, 1).toUpperCase()}
-    </div>
   )
 }
 
@@ -257,25 +237,25 @@ function Feed() {
               <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <input ref={fileInputRef} type="file" accept="image/*,video/*" onChange={handleFileSelect} style={{ display: 'none' }} />
                 <button
-                    onClick={() => fileInputRef.current?.click()}
-                    type="button"
-                    style={{
-                        background: 'transparent',
-                        border: '1px solid var(--nav-border)',
-                        borderRadius: '50%',
-                        width: 32,
-                        height: 32,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: 0,
-                        color: 'var(--accent-color)',
-                    }}
+                  onClick={() => fileInputRef.current?.click()}
+                  type="button"
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid var(--nav-border)',
+                    borderRadius: '50%',
+                    width: 32,
+                    height: 32,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 0,
+                    color: 'var(--accent-color)',
+                  }}
                 >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                        <line x1="12" y1="5" x2="12" y2="19" />
-                        <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
                 </button>
                 <button
                   onClick={handlePost}

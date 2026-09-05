@@ -25,9 +25,7 @@ function Notifications() {
     }
   }
 
-  useEffect(() => {
-    load()
-  }, [isLoggedIn])
+  useEffect(() => { load() }, [isLoggedIn])
 
   async function handleMarkAllRead() {
     try {
@@ -40,39 +38,63 @@ function Notifications() {
   }
 
   if (!isLoggedIn) {
-    return <div style={{ padding: 16 }}>Connect your wallet to see notifications.</div>
+    return (
+      <div style={{ padding: 16, textAlign: 'center', color: 'var(--text-muted)' }}>
+        Connect your wallet to see notifications.
+      </div>
+    )
   }
 
   const unreadCount = notifications.filter((n) => !n.read).length
 
   return (
-    <div style={{ padding: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>Notifications {unreadCount > 0 && `(${unreadCount})`}</h2>
-        {unreadCount > 0 && (
-          <button onClick={handleMarkAllRead}>Mark all read</button>
-        )}
-      </div>
+    <div style={{ padding: 16, maxWidth: 420, margin: '0 auto', textAlign: 'center' }}>
+      <h2 style={{ margin: '0 0 6px' }}>Notifications</h2>
+      {unreadCount > 0 && (
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
+          {unreadCount} unread
+        </p>
+      )}
 
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {unreadCount > 0 && (
+        <button
+          onClick={handleMarkAllRead}
+          style={{
+            background: 'transparent',
+            border: '1px solid var(--nav-border)',
+            borderRadius: 16,
+            padding: '6px 16px',
+            fontSize: 12.5,
+            color: 'var(--text-muted)',
+            marginBottom: 20,
+          }}
+        >
+          Mark all read
+        </button>
+      )}
+
+      {error && <p style={{ color: '#e0245e' }}>{error}</p>}
 
       {loading ? (
-        <p>Loading...</p>
+        <p style={{ color: 'var(--text-muted)' }}>Loading...</p>
       ) : notifications.length === 0 ? (
-        <p style={{ opacity: 0.6 }}>No notifications yet.</p>
+        <p style={{ color: 'var(--text-muted)' }}>No notifications yet.</p>
       ) : (
-        notifications.map((n, i) => (
-          <div
-            key={n.id || i}
-            style={{
-              padding: '10px 0',
-              borderBottom: '1px solid var(--nav-border)',
-              fontWeight: n.read ? 'normal' : 'bold',
-            }}
-          >
-            {n.message || n.text || JSON.stringify(n)}
-          </div>
-        ))
+        <div style={{ textAlign: 'left', border: '1px solid var(--nav-border)', borderRadius: 14, overflow: 'hidden' }}>
+          {notifications.map((n, i) => (
+            <div
+              key={n.id || i}
+              style={{
+                padding: '12px 16px',
+                borderBottom: i < notifications.length - 1 ? '1px solid var(--nav-border)' : 'none',
+                fontWeight: n.read ? 400 : 600,
+                fontSize: 14,
+              }}
+            >
+              {n.message || n.text || JSON.stringify(n)}
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )
