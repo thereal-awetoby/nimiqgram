@@ -110,7 +110,7 @@ function PostMedia({ url, type }) {
     }
     return (
       <div style={{ position: 'relative', margin: '0 auto', maxWidth: '100%', borderRadius: 12, overflow: 'hidden' }} onClick={togglePlay}>
-        <video ref={videoRef} src={url} playsInline style={{ display: 'block', width: '100%', maxHeight: 380, borderRadius: 12 }} />
+        <video ref={videoRef} src={url} playsInline controls={playing} style={{ display: 'block', width: '100%', maxHeight: 380, borderRadius: 12 }} />
         {!playing && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.25)' }}>
             <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -136,8 +136,14 @@ function PostMedia({ url, type }) {
           onClick={() => setLightbox(false)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
+          <button
+            onClick={(e) => { e.stopPropagation(); setLightbox(false) }}
+            style={{ position: 'absolute', top: 16, left: 16, width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+          </button>
           <img src={url} alt="" style={{ maxWidth: '92%', maxHeight: '85%', borderRadius: 8 }} />
-          
+
           <a href={url} download onClick={(e) => e.stopPropagation()}
             style={{ position: 'absolute', bottom: 24, background: 'var(--accent-color)', color: 'var(--bg-color)', padding: '8px 20px', borderRadius: 20, fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 13 }}
           >
