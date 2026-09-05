@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { getFeed, createPost, toggleLike, addComment, getPost } from '../lib/api'
+import { getFeed, createPost, toggleLike, addComment, getPost, getProfile } from '../lib/api'
 import { uploadMedia, getMediaType } from '../lib/upload'
 import TipModal from '../components/TipModal'
 import Avatar from '../components/Avatar'
@@ -51,14 +51,71 @@ function ActionButton({ onClick, disabled, active, children }) {
       disabled={disabled}
       style={{
         display: 'flex', alignItems: 'center', gap: 6,
-        background: 'transparent', border: 'none', padding: '4px 8px',
+        background: active ? 'rgba(242,169,59,0.1)' : 'transparent',
+        border: 'none', borderRadius: 16, padding: '6px 12px',
         color: active ? 'var(--accent-color)' : 'var(--text-muted)',
         cursor: disabled ? 'default' : 'pointer',
-        fontFamily: 'var(--font-body)', fontSize: 13,
+        fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 500,
       }}
     >
       {children}
     </button>
+  )
+}
+
+function PostMedia({ url, type }) {
+  const videoRef = useRef(null)
+  const [playing, setPlaying] = useState(false)
+  const [lightbox, setLightbox] = useState(false)
+
+  if (type === 'video') {
+    function togglePlay() {
+      const el = videoRef.current
+      if (!el) return
+      if (el.paused) { el.play(); setPlaying(true) } else { el.pause(); setPlaying(false) }
+    }
+    function goFullscreen(e) {
+      e.stopPropagation()
+      videoRef.current?.requestFullscreen?.()
+    }
+    return (
+      <div style={{ position: 'relative', margin: '0 auto', maxWidth: '100%', borderRadius: 12, overflow: 'hidden' }} onClick={togglePlay}>
+        <video ref={videoRef} src={url} playsInline style={{ display: 'block', width: '100%', maxHeight: 380, borderRadius: 12 }} />
+        {!playing && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.25)' }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z" /></svg>
+            </div>
+          </div>
+        )}
+        <button onClick={goFullscreen} style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(0,0,0,0.55)', border: 'none', borderRadius: 6, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M3 16v3a2 2 0 0 0 2 2h3" /></svg>
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <img
+        src={url} alt="" onClick={() => setLightbox(true)}
+        style={{ display: 'block', margin: '0 auto', maxWidth: '100%', maxHeight: 380, borderRadius: 12, cursor: 'zoom-in' }}
+      />
+      {lightbox && (
+        <div
+          onClick={() => setLightbox(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <img src={url} alt="" style={{ maxWidth: '92%', maxHeight: '85%', borderRadius: 8 }} />
+          
+          <a href={url} download onClick={(e) => e.stopPropagation()}
+            style={{ position: 'absolute', bottom: 24, background: 'var(--accent-color)', color: 'var(--bg-color)', padding: '8px 20px', borderRadius: 20, fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 13 }}
+          >
+            Download
+          </a>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -78,6 +135,7 @@ function Feed() {
   const [mediaType, setMediaType] = useState(null)
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef(null)
+  const [myAvatar, setMyAvatar] = useState(null)
 
   async function loadFeed() {
     setLoading(true)
@@ -92,7 +150,12 @@ function Feed() {
     }
   }
 
-  useEffect(() => { loadFeed() }, [])
+    useEffect(() => { loadFeed() }, [])
+
+  useEffect(() => {
+    if (!user?.wallet) return
+    getProfile(user.wallet).then((p) => setMyAvatar(p.avatarUrl || null)).catch(() => {})
+  }, [user])
 
   function handleFileSelect(e) {
     const file = e.target.files?.[0]
@@ -212,7 +275,7 @@ function Feed() {
       {isLoggedIn ? (
         <div style={{ padding: 16, borderBottom: '1px solid var(--nav-border)' }}>
           <div style={{ display: 'flex', gap: 12 }}>
-            <Avatar url={user?.avatarUrl} fallback={user?.username || user?.wallet} />
+              <Avatar url={myAvatar} fallback={user?.username || user?.wallet} />
             <div style={{ flex: 1 }}>
               <textarea
                 value={text}
@@ -298,15 +361,11 @@ function Feed() {
 
                   {post.mediaUrl && (
                     <div style={{ marginBottom: 10 }}>
-                      {post.mediaType === 'video' ? (
-                        <video src={post.mediaUrl} controls style={{ maxWidth: '100%', maxHeight: 380, borderRadius: 12 }} />
-                      ) : (
-                        <img src={post.mediaUrl} alt="" style={{ maxWidth: '100%', maxHeight: 380, borderRadius: 12 }} />
-                      )}
+                      <PostMedia url={post.mediaUrl} type={post.mediaType} />
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', gap: 24 }}>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 40, padding: '10px 0 4px', borderTop: '1px solid var(--nav-border)', marginTop: 4 }}>
                     <ActionButton onClick={() => handleLike(post.id)} disabled={!isLoggedIn} active={isLiked}>
                       <HeartIcon filled={isLiked} /> {post.likeCount}
                     </ActionButton>
