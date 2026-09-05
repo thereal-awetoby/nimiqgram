@@ -1,5 +1,5 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
-import { Address, PublicKey } from "@nimiq/core";
+import { PublicKey } from "@nimiq/core";
 import { config } from "./config.js";
 
 export type AuthChallenge = {
@@ -55,7 +55,7 @@ export async function verifyWalletSignature(challenge: AuthChallenge, request: A
   }
 
   try {
-    const derivedWallet = Address.fromPublicKeys([PublicKey.fromAny(request.publicKey)], 1).toUserFriendlyAddress();
+    const derivedWallet = PublicKey.fromAny(request.publicKey).toAddress().toUserFriendlyAddress();
     if (derivedWallet !== request.wallet) {
       console.warn({ walletSuffix, derivedSuffix: derivedWallet.slice(-6), reason: "public-key-wallet-mismatch-using-derived-wallet" }, "Wallet address differed from signing key; using derived wallet");
     }
@@ -73,9 +73,9 @@ export async function verifyWalletSignature(challenge: AuthChallenge, request: A
       console.warn({ walletSuffix, status: response.status, reason: "rpc-http-error" }, "Wallet verification rejected");
       return undefined;
     }
-    const result = await response.json() as { result?: { bool?: boolean } | boolean };
+    const result = await response.json() as { result?: { bool?: boolean } | boolean; error?: { code?: number; message?: string; data?: unknown } };
     const verified = typeof result.result === "boolean" ? result.result : result.result?.bool === true;
-    if (!verified) console.warn({ walletSuffix, reason: "rpc-signature-rejected" }, "Wallet verification rejected");
+    if (!verified) console.warn({ walletSuffix, reason: "rpc-signature-rejected", rpcError: result.error }, "Wallet verification rejected");
     return verified ? derivedWallet : undefined;
   } catch (error) {
     console.warn({ walletSuffix, reason: "rpc-request-failed", error: error instanceof Error ? error.message : "unknown" }, "Wallet verification rejected");
