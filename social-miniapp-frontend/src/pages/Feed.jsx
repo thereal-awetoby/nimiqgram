@@ -416,19 +416,19 @@ function Feed() {
                       borderTop: '1px solid var(--nav-border)',
                     }}
                   >
-                    <ActionButton onClick={() => toggleComments(post.id)} active={cState?.open} compact color="#1d9bf0">
+                    <ActionButton onClick={() => toggleComments(post.id)} active={cState?.open} compact color="var(--comment-accent)">
                       <CommentIcon /> {post.commentCount ?? 0}
                     </ActionButton>
-                    <ActionButton onClick={() => setTippingPost(post)} disabled={!isLoggedIn} compact color="#d5a22a">
+                    <ActionButton onClick={() => setTippingPost(post)} disabled={!isLoggedIn} compact color="var(--tip-accent)">
                       <TipIcon /> {post.tipTotal ?? 0}
                     </ActionButton>
-                    <ActionButton onClick={() => handleLike(post.id)} disabled={!isLoggedIn} active={isLiked} compact color="#e0245e">
+                    <ActionButton onClick={() => handleLike(post.id)} disabled={!isLoggedIn} active={isLiked} compact color="var(--like-accent)">
                       <HeartIcon filled={isLiked} /> {post.likeCount ?? 0}
                     </ActionButton>
-                    <ActionButton disabled compact color="#6b7280">
+                    <ActionButton disabled compact color="var(--view-accent)">
                       <EyeIcon /> {post.viewCount ?? 0}
                     </ActionButton>
-                    <ActionButton disabled compact color="#6b7280">
+                    <ActionButton disabled compact color="var(--share-accent)">
                       <ShareIcon />
                     </ActionButton>
                   </div>
