@@ -26,7 +26,6 @@ function Profile() {
         setUsername(profile.username || '')
         setBio(profile.bio || '')
         setAvatarUrl(profile.avatarUrl || '')
-        // If there's no username yet, this is a first-time setup — start in edit mode
         setMode(profile.username ? 'view' : 'edit')
       })
       .catch((err) => console.error(err))
@@ -103,28 +102,52 @@ function Profile() {
       ) : (
         <div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 12 }}>
-            <Avatar url={avatarUrl} fallback={username} size={72} />
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              style={{ position: 'relative', cursor: 'pointer', display: 'inline-block' }}
+            >
+              <Avatar url={avatarUrl} fallback={username} size={72} />
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: -2,
+                  right: -2,
+                  width: 26,
+                  height: 26,
+                  borderRadius: '50%',
+                  background: 'var(--accent-color)',
+                  border: '2px solid var(--bg-color)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--bg-color)" strokeWidth="2">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                  <circle cx="12" cy="13" r="4" />
+                </svg>
+              </div>
+              {uploadingAvatar && (
+                <div
+                  style={{
+                    position: 'absolute', inset: 0, borderRadius: '50%',
+                    background: 'rgba(0,0,0,0.5)', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                    color: '#fff', fontSize: 10,
+                  }}
+                >
+                  ...
+                </div>
+              )}
+            </div>
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
+              capture="environment"
               onChange={handleAvatarSelect}
               style={{ display: 'none' }}
             />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingAvatar}
-              style={{
-                marginTop: 8,
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--accent-color)',
-                fontSize: 12.5,
-                fontWeight: 600,
-              }}
-            >
-              {uploadingAvatar ? 'Uploading...' : 'Change photo'}
-            </button>
           </div>
 
           <h2 style={{ margin: '0 0 24px' }}>Edit Profile</h2>
