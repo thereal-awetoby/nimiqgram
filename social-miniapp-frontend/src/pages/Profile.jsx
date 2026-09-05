@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { getProfile, updateProfile, getStreaks } from '../lib/api'
+import { getProfile, updateProfile, getStreaks, getFollowing } from '../lib/api'
 import { uploadMedia } from '../lib/upload'
 import Avatar from '../components/Avatar'
 
 function Profile() {
   const { user, token, isLoggedIn } = useAuth()
+  const [displayName, setDisplayName] = useState('')
   const [username, setUsername] = useState('')
   const [bio, setBio] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
@@ -17,12 +18,15 @@ function Profile() {
 
   const [streakData, setStreakData] = useState(null)
   const [streakLoading, setStreakLoading] = useState(true)
+  const [following, setFollowing] = useState([])
+  const [followingLoading, setFollowingLoading] = useState(true)
 
   useEffect(() => {
     if (!user?.wallet) return
 
     getProfile(user.wallet)
       .then((profile) => {
+        setDisplayName(profile.displayName || profile.username || '')
         setUsername(profile.username || '')
         setBio(profile.bio || '')
         setAvatarUrl(profile.avatarUrl || '')
@@ -35,6 +39,12 @@ function Profile() {
       .then((data) => setStreakData(data))
       .catch((err) => console.error(err))
       .finally(() => setStreakLoading(false))
+
+    setFollowingLoading(true)
+    getFollowing(user.wallet)
+      .then((data) => setFollowing(data.users || []))
+      .catch((err) => console.error(err))
+      .finally(() => setFollowingLoading(false))
   }, [user])
 
   async function handleAvatarSelect(e) {
@@ -57,7 +67,7 @@ function Profile() {
     setStatus('saving')
     setError(null)
     try {
-      await updateProfile(token, { username, bio, avatarUrl })
+      await updateProfile(token, { displayName, username, bio, avatarUrl })
       setStatus('saved')
       setMode('view')
     } catch (err) {
@@ -80,7 +90,8 @@ function Profile() {
       {mode === 'view' ? (
         <div>
           <Avatar url={avatarUrl} fallback={username} size={72} />
-          <h2 style={{ margin: '12px 0 2px' }}>{username || 'Unnamed'}</h2>
+          <h2 style={{ margin: '12px 0 2px' }}>{displayName || username || 'Unnamed'}</h2>
+          {username && <div style={{ color: 'var(--accent-color)', fontSize: 13 }}>@{username}</div>}
           {bio && <p style={{ color: 'var(--text-muted)', fontSize: 14, margin: '0 0 16px' }}>{bio}</p>}
 
           <button
@@ -154,6 +165,15 @@ function Profile() {
 
           <div style={{ textAlign: 'left' }}>
             <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 13, color: 'var(--text-muted)' }}>Name</label>
+              <input
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                style={{ width: '100%', marginTop: 4 }}
+              />
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
               <label style={{ fontSize: 13, color: 'var(--text-muted)' }}>Username</label>
               <input
                 value={username}
@@ -212,6 +232,28 @@ function Profile() {
       )}
 
       <hr style={{ border: 'none', borderTop: '1px solid var(--nav-border)', margin: '32px 0' }} />
+
+      <div style={{ marginBottom: 24 }}>
+        <h3 style={{ fontSize: 15, marginBottom: 12, textAlign: 'left' }}>Following</h3>
+        {followingLoading ? (
+          <p style={{ color: 'var(--text-muted)', margin: 0 }}>Loading...</p>
+        ) : following.length === 0 ? (
+          <p style={{ color: 'var(--text-muted)', margin: 0 }}>Not following anyone yet.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, textAlign: 'left' }}>
+            {following.map((person) => (
+              <div key={person.wallet} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', border: '1px solid var(--nav-border)', borderRadius: 12 }}>
+                <Avatar url={person.avatarUrl} fallback={person.username || person.wallet} size={28} />
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13 }}>{person.displayName || person.username || person.wallet}</div>
+                  {person.username && <div style={{ color: 'var(--accent-color)', fontSize: 11 }}>@{person.username}</div>}
+                  {person.bio && <div style={{ color: 'var(--text-muted)', fontSize: 11, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{person.bio}</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <h3 style={{ fontSize: 15, marginBottom: 16 }}>Activity</h3>
 

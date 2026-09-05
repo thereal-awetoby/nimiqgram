@@ -1,20 +1,27 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { getFeed, createPost, toggleLike, addComment, getPost, getProfile, recordPostView } from '../lib/api'
+import { getFeed, createPost, toggleLike, addComment, getPost, getProfile, recordPostView, getFollowing } from '../lib/api'
 import { uploadMedia, getMediaType } from '../lib/upload'
 import TipModal from '../components/TipModal'
 import Avatar from '../components/Avatar'
 
 const MAX_VIDEO_SECONDS = 5 * 60
 const URL_REGEX = /(https?:\/\/[^\s]+)/g
+const MENTION_REGEX = /(@[a-zA-Z0-9_]{1,32})/g
 
 function renderTextWithLinks(text) {
   const parts = text.split(URL_REGEX)
   return parts.map((part, i) =>
-    URL_REGEX.test(part) ? (
+    /^https?:\/\//.test(part) ? (
       <a key={i} href={part} target="_blank" rel="noopener noreferrer">{part}</a>
     ) : (
-      <span key={i}>{part}</span>
+      part.split(MENTION_REGEX).map((segment, mentionIndex) =>
+        /^@[a-zA-Z0-9_]{1,32}$/.test(segment) ? (
+          <span key={`${i}-${mentionIndex}`} style={{ color: 'var(--accent-color)', fontWeight: 700 }}>{segment}</span>
+        ) : (
+          <span key={`${i}-${mentionIndex}`}>{segment}</span>
+        )
+      )
     )
   )
 }
@@ -152,6 +159,8 @@ function Feed() {
   const [error, setError] = useState(null)
   const [commentState, setCommentState] = useState({})
   const [tippingPost, setTippingPost] = useState(null)
+  const [followingUsers, setFollowingUsers] = useState([])
+  const [feedScope, setFeedScope] = useState('following')
 
   const [mediaFile, setMediaFile] = useState(null)
   const [mediaPreview, setMediaPreview] = useState(null)
@@ -164,7 +173,7 @@ function Feed() {
   async function loadFeed() {
     setLoading(true)
     try {
-      const data = await getFeed()
+      const data = await getFeed(undefined, token || undefined, feedScope)
       const nextPosts = data.posts || []
       setPosts(nextPosts)
       setLikedMap(Object.fromEntries(nextPosts.map((post) => [post.id, Boolean(post.likedByMe)])))
@@ -176,7 +185,30 @@ function Feed() {
     }
   }
 
-    useEffect(() => { loadFeed() }, [])
+  useEffect(() => {
+    if (!user?.wallet) {
+      setFeedScope('all')
+      return
+    }
+
+    getFollowing(user.wallet)
+      .then((data) => setFollowingUsers(data.users || []))
+      .catch(() => setFollowingUsers([]))
+
+    if (!token) {
+      setFeedScope('all')
+      return
+    }
+
+    setFeedScope((prev) => (prev === 'following' || prev === 'all' ? prev : 'following'))
+  }, [user, token])
+
+  useEffect(() => {
+    if (!token && !user) {
+      setFeedScope('all')
+    }
+    loadFeed()
+  }, [feedScope, token])
 
   useEffect(() => {
     if (!isLoggedIn || !posts.length || !token) return
@@ -324,6 +356,7 @@ function Feed() {
                 placeholder="What's happening?"
                 style={{ width: '100%', minHeight: 48, border: 'none', padding: 0, background: 'transparent', fontSize: 15, resize: 'vertical' }}
               />
+              <div style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 4 }}>Use @username to tag someone.</div>
 
               {mediaPreview && (
                 <div style={{ marginTop: 8, position: 'relative', display: 'inline-block' }}>
@@ -382,6 +415,38 @@ function Feed() {
 
       {error && <p style={{ color: '#e0245e', padding: '0 16px' }}>{error}</p>}
 
+      {isLoggedIn && (
+        <div style={{ padding: '12px 12px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <strong style={{ fontSize: 13, color: 'var(--text-muted)' }}>Following</strong>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={() => setFeedScope('following')} style={{ background: feedScope === 'following' ? 'var(--accent-color)' : 'transparent', color: feedScope === 'following' ? 'var(--bg-color)' : 'var(--text-color)', border: '1px solid var(--nav-border)', borderRadius: 999, padding: '5px 10px', fontSize: 12, fontWeight: 700 }}>
+                Following
+              </button>
+              <button onClick={() => setFeedScope('all')} style={{ background: feedScope === 'all' ? 'var(--accent-color)' : 'transparent', color: feedScope === 'all' ? 'var(--bg-color)' : 'var(--text-color)', border: '1px solid var(--nav-border)', borderRadius: 999, padding: '5px 10px', fontSize: 12, fontWeight: 700 }}>
+                For you
+              </button>
+            </div>
+          </div>
+
+          {followingUsers.length === 0 ? (
+            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 12 }}>Follow people to build your feed.</p>
+          ) : (
+            <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 8 }}>
+              {followingUsers.map((person) => (
+                <div key={person.wallet} style={{ minWidth: 60, textAlign: 'center' }}>
+                  <Avatar url={person.avatarUrl} fallback={person.username || person.wallet} size={38} />
+                  <div style={{ marginTop: 6, fontSize: 10, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 60 }}>
+                    {person.displayName || person.username || person.wallet.slice(0, 8)}
+                    {person.username && <span style={{ display: 'block', color: 'var(--accent-color)' }}>@{person.username}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {loading ? (
         <p style={{ padding: 16, color: 'var(--text-muted)' }}>Loading feed...</p>
       ) : posts.length === 0 ? (
@@ -395,7 +460,8 @@ function Feed() {
               <div style={{ display: 'flex', gap: 10 }}>
                 <Avatar url={post.author?.avatarUrl} fallback={post.author?.username || post.author?.wallet} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <strong style={{ fontSize: 14.5 }}>{post.author?.username || post.author?.wallet}</strong>
+                  <strong style={{ fontSize: 14.5 }}>{post.author?.displayName || post.author?.username || post.author?.wallet}</strong>
+                  {post.author?.username && <span style={{ color: 'var(--accent-color)', fontSize: 12, marginLeft: 6 }}>@{post.author.username}</span>}
                   <p style={{ margin: '4px 0 7px', fontSize: 15, lineHeight: 1.4 }}>
                     {renderTextWithLinks(post.text || '')}
                   </p>

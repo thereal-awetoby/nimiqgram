@@ -45,16 +45,27 @@ export function getProfile(wallet) {
   return request(`/profile/${wallet}`)
 }
 
-export function updateProfile(token, { username, bio, avatarUrl }) {
+export function updateProfile(token, { displayName, username, bio, avatarUrl }) {
   return authedRequest('/profile', token, {
     method: 'PUT',
-    body: JSON.stringify({ username, bio, avatarUrl }),
+    body: JSON.stringify({ displayName, username, bio, avatarUrl }),
   })
 }
 
-export function getFeed(cursor) {
-  const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''
+export function getFeed(cursor, token, scope = 'all') {
+  const params = new URLSearchParams()
+  if (cursor) params.set('cursor', cursor)
+  if (scope && scope !== 'all') params.set('scope', scope)
+
+  const query = params.toString() ? `?${params.toString()}` : ''
+  if (token) {
+    return authedRequest(`/feed${query}`, token)
+  }
   return request(`/feed${query}`)
+}
+
+export function getFollowing(wallet) {
+  return request(`/users/${wallet}/following`)
 }
 
 export function createPost(token, { text, mediaUrl, mediaType }) {

@@ -6,7 +6,7 @@ import { verifyTipTransaction } from "./nimiq-rpc.js";
 
 const walletSchema = z.object({ wallet: z.string().min(1).max(128) });
 const verifySchema = walletSchema.extend({ signature: z.string().min(1), publicKey: z.string().min(1).optional() });
-const profileSchema = z.object({ username: z.string().trim().min(1).max(32), bio: z.string().max(280), avatarUrl: z.string().url().nullable().optional() });
+const profileSchema = z.object({ displayName: z.string().trim().min(1).max(64).optional(), username: z.string().trim().min(1).max(32), bio: z.string().max(280), avatarUrl: z.string().url().nullable().optional() });
 const postSchema = z.object({
   text: z.string().trim().min(1).max(5000),
   mediaUrl: z.string().url().max(2048).nullable().optional(),
@@ -36,6 +36,7 @@ function mapPost(row: Record<string, any>) {
     createdAt: row.created_at,
     author: {
       wallet: row.author_wallet,
+      displayName: row.display_name,
       username: row.username,
       bio: row.bio,
       avatarUrl: row.avatar_url
@@ -119,29 +120,29 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       return reply.notFound("profile not found");
     }
     const row = result.rows[0];
-    return { wallet: row.wallet, username: row.username, bio: row.bio, avatarUrl: row.avatar_url, badges: row.badges, streak: row.streak };
+    return { wallet: row.wallet, displayName: row.display_name, username: row.username, bio: row.bio, avatarUrl: row.avatar_url, badges: row.badges, streak: row.streak };
   });
 
   app.get("/users/:wallet/following", async (request, reply) => {
     const params = request.params as { wallet: string };
     const result = await pool.query(
-      `select u.wallet, u.username, u.bio, u.avatar_url
+      `select u.wallet, u.display_name, u.username, u.bio, u.avatar_url
        from follows f join users u on u.wallet = f.followed_wallet
        where f.follower_wallet = $1 order by f.created_at desc`,
       [params.wallet]
     );
-    return { users: result.rows.map((row: Record<string, any>) => ({ wallet: row.wallet, username: row.username, bio: row.bio, avatarUrl: row.avatar_url })) };
+    return { users: result.rows.map((row: Record<string, any>) => ({ wallet: row.wallet, displayName: row.display_name, username: row.username, bio: row.bio, avatarUrl: row.avatar_url })) };
   });
 
   app.get("/users/:wallet/followers", async (request, reply) => {
     const params = request.params as { wallet: string };
     const result = await pool.query(
-      `select u.wallet, u.username, u.bio, u.avatar_url
+      `select u.wallet, u.display_name, u.username, u.bio, u.avatar_url
        from follows f join users u on u.wallet = f.follower_wallet
        where f.followed_wallet = $1 order by f.created_at desc`,
       [params.wallet]
     );
-    return { users: result.rows.map((row: Record<string, any>) => ({ wallet: row.wallet, username: row.username, bio: row.bio, avatarUrl: row.avatar_url })) };
+    return { users: result.rows.map((row: Record<string, any>) => ({ wallet: row.wallet, displayName: row.display_name, username: row.username, bio: row.bio, avatarUrl: row.avatar_url })) };
   });
 
   app.post("/users/:wallet/follow", async (request, reply) => {
@@ -172,20 +173,23 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     const body = profileSchema.safeParse(request.body);
     if (!body.success) return reply.code(400).send({ error: body.error.flatten() });
     const result = await pool.query(
-      `update users set username = $1, bio = $2, avatar_url = $3, updated_at = now()
-       where wallet = $4 returning wallet, username, bio, avatar_url as "avatarUrl"`,
-      [body.data.username, body.data.bio, body.data.avatarUrl ?? null, session.wallet]
+      `update users set display_name = $1, username = $2, bio = $3, avatar_url = $4, updated_at = now()
+       where wallet = $5 returning wallet, display_name as "displayName", username, bio, avatar_url as "avatarUrl"`,
+      [body.data.displayName ?? body.data.username, body.data.username, body.data.bio, body.data.avatarUrl ?? null, session.wallet]
     );
     return result.rows[0];
   });
 
   app.get("/feed", async (request) => {
-    const query = request.query as { cursor?: string };
+    const query = request.query as { cursor?: string; scope?: string };
     const cursor = query.cursor ? new Date(query.cursor) : new Date();
+    const scope = query.scope === "following" ? "following" : "all";
     const session = getSession(request);
     const viewerWallet = session?.wallet ?? "__anonymous__";
+    const followingWallet = session?.wallet ?? "__anonymous__";
     const result = await pool.query(
-      `select p.id, p.text, p.media_url, p.media_type, p.created_at, u.wallet as author_wallet, u.username,
+            `select p.id, p.text, p.media_url, p.media_type, p.created_at, u.wallet as author_wallet, u.display_name,
+              u.username,
               u.bio, u.avatar_url,
               count(distinct l.wallet)::int as like_count,
               count(distinct c.id)::int as comment_count,
@@ -198,8 +202,9 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
        left join tips t on t.post_id = p.id
        left join post_views v on v.post_id = p.id
        where p.created_at < $1
+         and ($4 = 'all' or p.author_wallet in (select followed_wallet from follows where follower_wallet = $3))
        group by p.id, u.wallet order by p.created_at desc limit 21`,
-      [cursor, viewerWallet]
+      [cursor, viewerWallet, followingWallet, scope]
     );
     const hasMore = result.rows.length > 20;
     const rows = hasMore ? result.rows.slice(0, 20) : result.rows;
@@ -224,7 +229,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     const session = getSession(request);
     const viewerWallet = session?.wallet ?? "__anonymous__";
     const result = await pool.query(
-      `select p.id, p.text, p.media_url, p.media_type, p.created_at, u.wallet as author_wallet, u.username, u.bio, u.avatar_url,
+      `select p.id, p.text, p.media_url, p.media_type, p.created_at, u.wallet as author_wallet, u.display_name, u.username, u.bio, u.avatar_url,
               count(distinct l.wallet)::int as like_count, count(distinct c.id)::int as comment_count,
               coalesce(sum(t.amount_nim) filter (where t.status = 'verified'), 0)::text as tip_total,
               count(distinct v.viewer_wallet)::int as view_count,

@@ -9,7 +9,7 @@
   --watermark-opacity: 0.05;
   --comment-accent: #b8790e;
   --tip-accent: #c88b14;
-  --like-accent: #e35d78;
+  --like-accent: #b8790e;
   --view-accent: #71767d;
   --share-accent: #70757d;
 
@@ -28,7 +28,7 @@
   --watermark-opacity: 0.055;
   --comment-accent: #f2a93b;
   --tip-accent: #f0b14b;
-  --like-accent: #ff6d8c;
+  --like-accent: #f2a93b;
   --view-accent: #b0b6bf;
   --share-accent: #b0b6bf;
 }
