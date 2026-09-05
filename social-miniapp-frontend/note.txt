@@ -5,3 +5,4 @@ building
 fixing 
 doing more of fixing
 wallet connection fix done 
+unto the nexts
