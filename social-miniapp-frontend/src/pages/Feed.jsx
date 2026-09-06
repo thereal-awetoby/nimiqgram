@@ -70,6 +70,7 @@ function ActionButton({ onClick, disabled, active, children, compact = false, co
     <button
       onClick={onClick}
       disabled={disabled}
+      className={disabled ? '' : 'tap-scale'}
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
         background: active ? 'rgba(184, 121, 14, 0.1)' : 'transparent',
@@ -136,7 +137,7 @@ function PostMedia({ url, type }) {
             </div>
           </div>
         )}
-        <button onClick={goFullscreen} style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(0,0,0,0.55)', border: 'none', borderRadius: 6, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+        <button onClick={goFullscreen} className="tap-scale" style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(0,0,0,0.55)', border: 'none', borderRadius: 6, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M3 16v3a2 2 0 0 0 2 2h3" /></svg>
         </button>
       </div>
@@ -156,13 +157,14 @@ function PostMedia({ url, type }) {
         >
           <button
             onClick={(e) => { e.stopPropagation(); setLightbox(false) }}
+            className="tap-scale"
             style={{ position: 'absolute', top: 16, left: 16, width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
           </button>
           <img src={url} alt="" style={{ maxWidth: '92%', maxHeight: '85%', borderRadius: 'var(--radius-card)' }} />
 
-          <a href={url} download onClick={(e) => e.stopPropagation()}
+          <a href={url} download onClick={(e) => e.stopPropagation()} className="tap-scale"
             style={{ position: 'absolute', bottom: 24, background: 'var(--accent-color)', color: 'var(--bg-color)', padding: '8px 20px', borderRadius: 'var(--radius-btn)', fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 13 }}
           >
             Download
@@ -399,6 +401,7 @@ function Feed() {
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   type="button"
+                  className="tap-scale"
                   style={{
                     background: 'transparent',
                     border: '1px solid var(--nav-border)',
@@ -420,6 +423,7 @@ function Feed() {
                 <button
                   onClick={handlePost}
                   disabled={posting || (!text.trim() && !mediaFile)}
+                  className="tap-scale"
                   style={{
                     background: 'var(--accent-color)', color: 'var(--bg-color)', border: 'none',
                     borderRadius: 'var(--radius-btn)', padding: '7px 16px', fontWeight: 600, fontFamily: 'var(--font-display)',
@@ -444,6 +448,7 @@ function Feed() {
             <div style={{ display: 'inline-flex', border: '1px solid var(--nav-border)', borderRadius: 999, padding: 3 }}>
               <button
                 onClick={() => setFeedScope('all')}
+                className="tap-scale"
                 style={{
                   background: feedScope === 'all' ? 'var(--accent-color)' : 'transparent',
                   color: feedScope === 'all' ? 'var(--bg-color)' : 'var(--text-muted)',
@@ -454,6 +459,7 @@ function Feed() {
               </button>
               <button
                 onClick={() => setFeedScope('following')}
+                className="tap-scale"
                 style={{
                   background: feedScope === 'following' ? 'var(--accent-color)' : 'transparent',
                   color: feedScope === 'following' ? 'var(--bg-color)' : 'var(--text-muted)',
@@ -569,6 +575,7 @@ function Feed() {
                           <button
                             onClick={() => submitComment(post.id)}
                             disabled={cState.submitting || !cState.draft?.trim()}
+                            className="tap-scale"
                             style={{ background: 'transparent', border: '1px solid var(--nav-border)', borderRadius: 8, color: 'var(--accent-color)', fontSize: 13 }}
                           >
                             {cState.submitting ? '...' : 'Reply'}

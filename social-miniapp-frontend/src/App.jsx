@@ -77,6 +77,7 @@ function BottomNav() {
 
   return (
     <nav
+      className="glass-surface"
       style={{
         position: 'fixed',
         left: '50%',
@@ -88,7 +89,6 @@ function BottomNav() {
         justifyContent: 'space-around',
         padding: '10px 14px 12px',
         borderTop: '1px solid var(--nav-border)',
-        background: 'var(--bg-elevated)',
         zIndex: 50,
       }}
     >
@@ -99,6 +99,7 @@ function BottomNav() {
             key={item.to}
             to={item.to}
             aria-label={item.label}
+            className="tap-scale"
             style={{
               width: 42,
               height: 42,
@@ -162,19 +163,27 @@ function App() {
           minHeight: '100vh',
           borderLeft: '1px solid var(--nav-border)',
           borderRight: '1px solid var(--nav-border)',
+          position: 'relative',
         }}
       >
+        <div className="top-glow" />
+
         <div
+          className="glass-surface"
           style={{
+            position: 'sticky',
+            top: 0,
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
             padding: '14px 16px',
             borderBottom: '1px solid var(--nav-border)',
+            zIndex: 40,
           }}
         >
           <button
             onClick={toggleTheme}
+            className="tap-scale"
             style={{
               background: 'var(--bg-elevated)',
               border: '1px solid var(--nav-border)',
@@ -194,7 +203,7 @@ function App() {
           <WalletConnect />
         </div>
 
-        <div style={{ paddingBottom: 90 }}>
+        <div style={{ paddingBottom: 90, position: 'relative', zIndex: 1 }}>
           <Routes>
             <Route path="/" element={<Feed />} />
             <Route path="/profile" element={<Profile />} />
