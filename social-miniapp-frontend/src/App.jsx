@@ -7,7 +7,6 @@ import Notifications from './pages/Notifications'
 import Search from './pages/Search'
 import Post from './pages/Post'
 import WalletConnect from './components/WalletConnect'
-import NimiqWatermark from './components/NimiqWatermark'
 import BouncingHexagon from './BouncingHexagon'
 
 const NAV_ITEMS = [
@@ -24,7 +23,7 @@ function NavIcon({ type, active }) {
     height: 18,
     viewBox: '0 0 24 24',
     fill: 'none',
-    stroke: active ? '#b6780a' : 'currentColor',
+    stroke: active ? 'var(--accent-color)' : 'currentColor',
     strokeWidth: 2,
     strokeLinecap: 'round',
     strokeLinejoin: 'round',
@@ -87,7 +86,6 @@ function BottomNav() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-around',
-        gap: 0,
         padding: '10px 14px 12px',
         borderTop: '1px solid var(--nav-border)',
         background: 'var(--bg-elevated)',
@@ -105,16 +103,23 @@ function BottomNav() {
               width: 42,
               height: 42,
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              borderRadius: 10,
-              background: active ? '#f7e5a9' : 'transparent',
-              color: active ? '#b6780a' : 'var(--text-muted)',
-              transition: 'all 0.18s ease',
-              boxShadow: active ? 'inset 0 0 0 1px rgba(182, 120, 10, 0.05)' : 'none',
+              gap: 4,
+              color: active ? 'var(--accent-color)' : 'var(--text-muted)',
+              transition: 'color 0.18s ease',
             }}
           >
             <NavIcon type={item.icon} active={active} />
+            <span
+              style={{
+                width: 4,
+                height: 4,
+                borderRadius: '50%',
+                background: active ? 'var(--accent-color)' : 'transparent',
+              }}
+            />
           </Link>
         )
       })}
@@ -150,8 +155,6 @@ function App() {
 
   return (
     <BrowserRouter>
-      <NimiqWatermark />
-
       <div
         style={{
           maxWidth: 560,

@@ -2,16 +2,18 @@
   --bg-color: #fafaf8;
   --bg-elevated: #ffffff;
   --text-color: #17171a;
-  --text-muted: #6b6b70;
+  --text-muted: #5c5c62;
   --nav-border: #e7e4dc;
   --accent-color: #b8790e;
   --link-color: #b8790e;
-  --watermark-opacity: 0.05;
   --comment-accent: #b8790e;
   --tip-accent: #c88b14;
   --like-accent: #b8790e;
-  --view-accent: #71767d;
-  --share-accent: #70757d;
+  --view-accent: #6b7075;
+  --share-accent: #6b7075;
+
+  --radius-card: 14px;
+  --radius-btn: 20px;
 
   --font-display: 'Space Grotesk', sans-serif;
   --font-body: 'Inter', sans-serif;
@@ -25,7 +27,6 @@
   --nav-border: #232326;
   --accent-color: #f2a93b;
   --link-color: #f2a93b;
-  --watermark-opacity: 0.055;
   --comment-accent: #f2a93b;
   --tip-accent: #f0b14b;
   --like-accent: #f2a93b;
@@ -66,7 +67,7 @@ textarea, input {
   background: var(--bg-elevated);
   color: var(--text-color);
   border: 1px solid var(--nav-border);
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 8px 10px;
 }
 
@@ -165,89 +166,30 @@ textarea, input {
   transform-origin: center bottom;
 }
 
-/* Matches the JS: translateY follows sin(t*pi), rotate follows an
-   ease-in-out quadratic, squash only applies right at takeoff/landing. */
 @keyframes hexBounceRoll {
-  0% {
-    transform: translateY(0) rotate(0deg) scaleY(0.8475);
-  }
-  10% {
-    transform: translateY(-29.4px) rotate(1.2deg) scaleY(1);
-  }
-  20% {
-    transform: translateY(-55.8px) rotate(4.8deg) scaleY(1);
-  }
-  30% {
-    transform: translateY(-76.9px) rotate(10.8deg) scaleY(1);
-  }
-  40% {
-    transform: translateY(-90.4px) rotate(19.2deg) scaleY(1);
-  }
-  50% {
-    transform: translateY(-95px) rotate(30deg) scaleY(1);
-  }
-  60% {
-    transform: translateY(-90.4px) rotate(40.8deg) scaleY(1);
-  }
-  70% {
-    transform: translateY(-76.9px) rotate(49.2deg) scaleY(1);
-  }
-  80% {
-    transform: translateY(-55.8px) rotate(55.2deg) scaleY(1);
-  }
-  90% {
-    transform: translateY(-29.4px) rotate(58.8deg) scaleY(1);
-  }
-  100% {
-    transform: translateY(0) rotate(60deg) scaleY(0.8475);
-  }
+  0% { transform: translateY(0) rotate(0deg) scaleY(0.8475); }
+  10% { transform: translateY(-29.4px) rotate(1.2deg) scaleY(1); }
+  20% { transform: translateY(-55.8px) rotate(4.8deg) scaleY(1); }
+  30% { transform: translateY(-76.9px) rotate(10.8deg) scaleY(1); }
+  40% { transform: translateY(-90.4px) rotate(19.2deg) scaleY(1); }
+  50% { transform: translateY(-95px) rotate(30deg) scaleY(1); }
+  60% { transform: translateY(-90.4px) rotate(40.8deg) scaleY(1); }
+  70% { transform: translateY(-76.9px) rotate(49.2deg) scaleY(1); }
+  80% { transform: translateY(-55.8px) rotate(55.2deg) scaleY(1); }
+  90% { transform: translateY(-29.4px) rotate(58.8deg) scaleY(1); }
+  100% { transform: translateY(0) rotate(60deg) scaleY(0.8475); }
 }
 
-/* Matches the JS: shadow width and opacity shrink in step with
-   how high the hexagon is (sin(t*pi)), not a generic pulse. */
 @keyframes hexShadowPulse {
-  0% {
-    transform: scaleX(1);
-    opacity: 0.35;
-  }
-  10% {
-    transform: scaleX(0.8146);
-    opacity: 0.2959;
-  }
-  20% {
-    transform: scaleX(0.6473);
-    opacity: 0.2471;
-  }
-  30% {
-    transform: scaleX(0.5146);
-    opacity: 0.2084;
-  }
-  40% {
-    transform: scaleX(0.4293);
-    opacity: 0.1836;
-  }
-  50% {
-    transform: scaleX(0.4);
-    opacity: 0.175;
-  }
-  60% {
-    transform: scaleX(0.4293);
-    opacity: 0.1836;
-  }
-  70% {
-    transform: scaleX(0.5146);
-    opacity: 0.2084;
-  }
-  80% {
-    transform: scaleX(0.6473);
-    opacity: 0.2471;
-  }
-  90% {
-    transform: scaleX(0.8146);
-    opacity: 0.2959;
-  }
-  100% {
-    transform: scaleX(1);
-    opacity: 0.35;
-  }
+  0% { transform: scaleX(1); opacity: 0.35; }
+  10% { transform: scaleX(0.8146); opacity: 0.2959; }
+  20% { transform: scaleX(0.6473); opacity: 0.2471; }
+  30% { transform: scaleX(0.5146); opacity: 0.2084; }
+  40% { transform: scaleX(0.4293); opacity: 0.1836; }
+  50% { transform: scaleX(0.4); opacity: 0.175; }
+  60% { transform: scaleX(0.4293); opacity: 0.1836; }
+  70% { transform: scaleX(0.5146); opacity: 0.2084; }
+  80% { transform: scaleX(0.6473); opacity: 0.2471; }
+  90% { transform: scaleX(0.8146); opacity: 0.2959; }
+  100% { transform: scaleX(1); opacity: 0.35; }
 }

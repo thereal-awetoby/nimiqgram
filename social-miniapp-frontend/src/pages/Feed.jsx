@@ -10,6 +10,7 @@ import LoadingHexagon from '../components/LoadingHexagon'
 const MAX_VIDEO_SECONDS = 5 * 60
 const URL_REGEX = /(https?:\/\/[^\s]+)/g
 const MENTION_REGEX = /(@[a-zA-Z0-9_]{1,32})/g
+const PAGE_PADDING = 16
 
 function renderTextWithLinks(text) {
   const parts = text.split(URL_REGEX)
@@ -111,8 +112,8 @@ function PostMedia({ url, type }) {
       videoRef.current?.requestFullscreen?.()
     }
     return (
-      <div style={{ position: 'relative', margin: '0 auto', maxWidth: '100%', borderRadius: 12, overflow: 'hidden' }} onClick={togglePlay}>
-        <video ref={videoRef} src={url} playsInline controls={playing} style={{ display: 'block', width: '100%', maxHeight: 380, borderRadius: 12 }} />
+      <div style={{ position: 'relative', margin: '0 auto', maxWidth: '100%', borderRadius: 'var(--radius-card)', overflow: 'hidden' }} onClick={togglePlay}>
+        <video ref={videoRef} src={url} playsInline controls={playing} style={{ display: 'block', width: '100%', maxHeight: 380, borderRadius: 'var(--radius-card)' }} />
         {!playing && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.25)' }}>
             <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -131,7 +132,7 @@ function PostMedia({ url, type }) {
     <>
       <img
         src={url} alt="" onClick={() => setLightbox(true)}
-        style={{ display: 'block', margin: '0 auto', maxWidth: '100%', maxHeight: 380, borderRadius: 12, cursor: 'zoom-in' }}
+        style={{ display: 'block', margin: '0 auto', maxWidth: '100%', maxHeight: 380, borderRadius: 'var(--radius-card)', cursor: 'zoom-in' }}
       />
       {lightbox && (
         <div
@@ -144,10 +145,10 @@ function PostMedia({ url, type }) {
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
           </button>
-          <img src={url} alt="" style={{ maxWidth: '92%', maxHeight: '85%', borderRadius: 8 }} />
+          <img src={url} alt="" style={{ maxWidth: '92%', maxHeight: '85%', borderRadius: 'var(--radius-card)' }} />
 
           <a href={url} download onClick={(e) => e.stopPropagation()}
-            style={{ position: 'absolute', bottom: 24, background: 'var(--accent-color)', color: 'var(--bg-color)', padding: '8px 20px', borderRadius: 20, fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 13 }}
+            style={{ position: 'absolute', bottom: 24, background: 'var(--accent-color)', color: 'var(--bg-color)', padding: '8px 20px', borderRadius: 'var(--radius-btn)', fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 13 }}
           >
             Download
           </a>
@@ -354,9 +355,9 @@ function Feed() {
   return (
     <div>
       {isLoggedIn ? (
-        <div style={{ padding: '12px 12px 10px', borderBottom: '1px solid var(--nav-border)' }}>
+        <div style={{ padding: `14px ${PAGE_PADDING}px 10px`, borderBottom: '1px solid var(--nav-border)' }}>
           <div style={{ display: 'flex', gap: 10 }}>
-              <Avatar url={myAvatar} fallback={user?.username || user?.wallet} />
+            <Avatar url={myAvatar} fallback={user?.username || user?.wallet} />
             <div style={{ flex: 1 }}>
               <textarea
                 value={text}
@@ -364,14 +365,13 @@ function Feed() {
                 placeholder="What's happening?"
                 style={{ width: '100%', minHeight: 48, border: 'none', padding: 0, background: 'transparent', fontSize: 15, resize: 'vertical' }}
               />
-              <div style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 4 }}>Use @username to tag someone.</div>
 
               {mediaPreview && (
                 <div style={{ marginTop: 8, position: 'relative', display: 'inline-block' }}>
                   {mediaType === 'video' ? (
-                    <video src={mediaPreview} controls style={{ maxWidth: 220, maxHeight: 220, borderRadius: 10 }} />
+                    <video src={mediaPreview} controls style={{ maxWidth: 220, maxHeight: 220, borderRadius: 'var(--radius-card)' }} />
                   ) : (
-                    <img src={mediaPreview} alt="preview" style={{ maxWidth: 220, maxHeight: 220, borderRadius: 10 }} />
+                    <img src={mediaPreview} alt="preview" style={{ maxWidth: 220, maxHeight: 220, borderRadius: 'var(--radius-card)' }} />
                   )}
                   <button onClick={clearMedia} style={{ display: 'block', marginTop: 4, background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: 12 }}>
                     Remove
@@ -407,7 +407,7 @@ function Feed() {
                   disabled={posting || (!text.trim() && !mediaFile)}
                   style={{
                     background: 'var(--accent-color)', color: 'var(--bg-color)', border: 'none',
-                    borderRadius: 18, padding: '7px 16px', fontWeight: 600, fontFamily: 'var(--font-display)',
+                    borderRadius: 'var(--radius-btn)', padding: '7px 16px', fontWeight: 600, fontFamily: 'var(--font-display)',
                     opacity: posting || (!text.trim() && !mediaFile) ? 0.5 : 1,
                   }}
                 >
@@ -418,29 +418,40 @@ function Feed() {
           </div>
         </div>
       ) : (
-        <p style={{ padding: 16, color: 'var(--text-muted)' }}>Connect your wallet to post.</p>
+        <p style={{ padding: PAGE_PADDING, color: 'var(--text-muted)' }}>Connect your wallet to post.</p>
       )}
 
-      {error && <p style={{ color: '#e0245e', padding: '0 16px' }}>{error}</p>}
+      {error && <p style={{ color: '#e0245e', padding: `0 ${PAGE_PADDING}px` }}>{error}</p>}
 
       {isLoggedIn && (
-        <div style={{ padding: '12px 12px 0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <strong style={{ fontSize: 13, color: 'var(--text-muted)' }}>{feedScope === 'all' ? 'For you' : 'Following'}</strong>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button onClick={() => setFeedScope('all')} style={{ background: feedScope === 'all' ? 'var(--accent-color)' : 'transparent', color: feedScope === 'all' ? 'var(--bg-color)' : 'var(--text-color)', border: '1px solid var(--nav-border)', borderRadius: 999, padding: '5px 10px', fontSize: 12, fontWeight: 700 }}>
+        <div style={{ padding: `14px ${PAGE_PADDING}px 0` }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+            <div style={{ display: 'inline-flex', border: '1px solid var(--nav-border)', borderRadius: 999, padding: 3 }}>
+              <button
+                onClick={() => setFeedScope('all')}
+                style={{
+                  background: feedScope === 'all' ? 'var(--accent-color)' : 'transparent',
+                  color: feedScope === 'all' ? 'var(--bg-color)' : 'var(--text-muted)',
+                  border: 'none', borderRadius: 999, padding: '6px 16px', fontSize: 12.5, fontWeight: 700,
+                }}
+              >
                 For you
               </button>
-              <button onClick={() => setFeedScope('following')} style={{ background: feedScope === 'following' ? 'var(--accent-color)' : 'transparent', color: feedScope === 'following' ? 'var(--bg-color)' : 'var(--text-color)', border: '1px solid var(--nav-border)', borderRadius: 999, padding: '5px 10px', fontSize: 12, fontWeight: 700 }}>
+              <button
+                onClick={() => setFeedScope('following')}
+                style={{
+                  background: feedScope === 'following' ? 'var(--accent-color)' : 'transparent',
+                  color: feedScope === 'following' ? 'var(--bg-color)' : 'var(--text-muted)',
+                  border: 'none', borderRadius: 999, padding: '6px 16px', fontSize: 12.5, fontWeight: 700,
+                }}
+              >
                 Following
               </button>
             </div>
           </div>
 
-          {followingUsers.length === 0 ? (
-            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 12 }}>Follow people to build your feed.</p>
-          ) : (
-            <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 8 }}>
+          {followingUsers.length > 0 && (
+            <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 10 }}>
               {followingUsers.map((person) => (
                 <div key={person.wallet} style={{ minWidth: 60, textAlign: 'center' }}>
                   <Avatar url={person.avatarUrl} fallback={person.username || person.wallet} size={38} />
@@ -458,13 +469,13 @@ function Feed() {
       {loading ? (
         <LoadingHexagon label="Loading feed" />
       ) : posts.length === 0 ? (
-        <p style={{ padding: 16, color: 'var(--text-muted)' }}>No posts yet — be the first!</p>
+        <p style={{ padding: PAGE_PADDING, color: 'var(--text-muted)' }}>No posts yet — be the first!</p>
       ) : (
         posts.map((post) => {
           const cState = commentState[post.id]
           const isLiked = likedMap[post.id]
           return (
-            <div key={post.id} style={{ padding: '10px 10px 8px', borderBottom: '1px solid var(--nav-border)' }}>
+            <div key={post.id} style={{ padding: `14px ${PAGE_PADDING}px`, borderBottom: '1px solid var(--nav-border)' }}>
               <div style={{ display: 'flex', gap: 10 }}>
                 <Link to={`/profile/${encodeURIComponent(post.author?.wallet || '')}`} aria-label={`Open ${post.author?.displayName || post.author?.username || 'profile'}`} style={{ height: 40 }}>
                   <Avatar url={post.author?.avatarUrl} fallback={post.author?.username || post.author?.wallet} />
