@@ -155,11 +155,15 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   app.get("/users/:wallet/posts", async (request) => {
     const params = request.params as { wallet: string };
     const result = await pool.query(
-      `select p.id, p.text, p.media_url, p.media_type, p.created_at, u.wallet as author_wallet, u.display_name, u.username, u.avatar_url
+      `select p.id, p.text, p.media_url, p.media_type, p.created_at, u.wallet as author_wallet, u.display_name, u.username, u.avatar_url,
+              (select count(*)::int from likes l where l.post_id = p.id) as like_count,
+              (select count(*)::int from comments c where c.post_id = p.id) as comment_count,
+              (select coalesce(sum(t.amount_nim) filter (where t.status = 'verified'), 0)::text from tips t where t.post_id = p.id) as tip_total,
+              (select count(*)::int from post_views v where v.post_id = p.id) as view_count
        from posts p join users u on u.wallet = p.author_wallet where p.author_wallet = $1 order by p.created_at desc limit 50`,
       [params.wallet]
     );
-    return { posts: result.rows.map((row: Record<string, any>) => ({ id: row.id, text: row.text, mediaUrl: row.media_url, mediaType: row.media_type, createdAt: row.created_at, author: { wallet: row.author_wallet, displayName: row.display_name, username: row.username, avatarUrl: row.avatar_url } })) };
+    return { posts: result.rows.map(mapPost) };
   });
 
   app.get("/users/:wallet/likes", async (request) => {
@@ -413,7 +417,22 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       );
     }
     await recordActivity(session.wallet);
-    return reply.code(201).send({ id: result.rows[0].id, text: result.rows[0].text, createdAt: result.rows[0].created_at, authorWallet: session.wallet });
+    const author = await pool.query(
+      `select wallet, display_name, username, avatar_url from users where wallet = $1`,
+      [session.wallet]
+    );
+    const authorRow = author.rows[0];
+    return reply.code(201).send({
+      id: result.rows[0].id,
+      text: result.rows[0].text,
+      createdAt: result.rows[0].created_at,
+      author: {
+        wallet: authorRow.wallet,
+        displayName: authorRow.display_name,
+        username: authorRow.username,
+        avatarUrl: authorRow.avatar_url
+      }
+    });
   });
 
   app.post("/tips", async (request, reply) => {

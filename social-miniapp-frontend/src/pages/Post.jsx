@@ -6,6 +6,7 @@ import Avatar from '../components/Avatar'
 import LoadingHexagon from '../components/LoadingHexagon'
 import TipModal from '../components/TipModal'
 import { formatPostDate } from '../lib/date'
+import VideoPreview from '../components/VideoPreview'
 
 function HeartIcon({ filled }) {
   return (
@@ -37,6 +38,22 @@ function EyeIcon() {
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
       <circle cx="12" cy="12" r="3" />
+    </svg>
+  )
+}
+
+function BackIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="m15 18-6-6 6-6" />
+    </svg>
+  )
+}
+
+function BookmarkIcon({ filled }) {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M6 4.5A2.5 2.5 0 0 1 8.5 2h7A2.5 2.5 0 0 1 18 4.5V22l-6-3.5L6 22V4.5Z" />
     </svg>
   )
 }
@@ -148,7 +165,9 @@ function Post() {
 
   return (
     <div style={{ padding: 16, maxWidth: 560, margin: '0 auto' }}>
-      <Link to="/" style={{ color: 'var(--accent-color)', fontSize: 13, fontWeight: 700 }}>Back to feed</Link>
+      <Link to="/" aria-label="Back to feed" title="Back to feed" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, color: 'var(--accent-color)', border: '1px solid var(--nav-border)', borderRadius: '50%' }}>
+        <BackIcon />
+      </Link>
 
       <article style={{ marginTop: 18, paddingBottom: 20, borderBottom: '1px solid var(--nav-border)' }}>
         <Link to={`/profile/${encodeURIComponent(post.author?.wallet || '')}`} style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'inherit' }}>
@@ -161,7 +180,7 @@ function Post() {
         </Link>
 
         <p style={{ margin: '18px 0 12px', fontSize: 17, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{post.text}</p>
-        {post.mediaUrl && post.mediaType === 'video' && <video src={post.mediaUrl} controls style={{ width: '100%', maxHeight: 480, borderRadius: 12 }} />}
+        {post.mediaUrl && post.mediaType === 'video' && <VideoPreview src={post.mediaUrl} style={{ width: '100%', maxHeight: 480, borderRadius: 12 }} />}
         {post.mediaUrl && post.mediaType !== 'video' && <img src={post.mediaUrl} alt="" style={{ display: 'block', width: '100%', maxHeight: 480, objectFit: 'contain', borderRadius: 12 }} />}
 
         <div
@@ -190,7 +209,9 @@ function Post() {
           </ActionButton>
           {isLoggedIn && (
             <ActionButton onClick={toggleBookmark} active={bookmarked} color="var(--accent-color)">
-              {bookmarked ? 'Saved' : 'Save'}
+              <span aria-label={bookmarked ? 'Remove bookmark' : 'Save bookmark'} title={bookmarked ? 'Remove bookmark' : 'Save bookmark'}>
+                <BookmarkIcon filled={bookmarked} />
+              </span>
             </ActionButton>
           )}
         </div>

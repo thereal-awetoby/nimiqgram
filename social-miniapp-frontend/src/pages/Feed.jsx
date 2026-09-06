@@ -6,6 +6,7 @@ import { uploadMedia, getMediaType } from '../lib/upload'
 import TipModal from '../components/TipModal'
 import Avatar from '../components/Avatar'
 import LoadingHexagon from '../components/LoadingHexagon'
+import VideoPreview from '../components/VideoPreview'
 import { formatPostDate } from '../lib/date'
 
 const MAX_VIDEO_SECONDS = 5 * 60
@@ -114,7 +115,7 @@ function PostMedia({ url, type }) {
     }
     return (
       <div style={{ position: 'relative', margin: '0 auto', maxWidth: '100%', borderRadius: 'var(--radius-card)', overflow: 'hidden' }} onClick={togglePlay}>
-        <video ref={videoRef} src={url} playsInline controls={playing} style={{ display: 'block', width: '100%', maxHeight: 380, borderRadius: 'var(--radius-card)' }} />
+        <VideoPreview videoRef={videoRef} src={url} controls={playing} style={{ display: 'block', width: '100%', maxHeight: 380, borderRadius: 'var(--radius-card)' }} />
         {!playing && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.25)' }}>
             <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -370,7 +371,7 @@ function Feed() {
               {mediaPreview && (
                 <div style={{ marginTop: 8, position: 'relative', display: 'inline-block' }}>
                   {mediaType === 'video' ? (
-                    <video src={mediaPreview} controls style={{ maxWidth: 220, maxHeight: 220, borderRadius: 'var(--radius-card)' }} />
+                    <VideoPreview src={mediaPreview} style={{ maxWidth: 220, maxHeight: 220, borderRadius: 'var(--radius-card)' }} />
                   ) : (
                     <img src={mediaPreview} alt="preview" style={{ maxWidth: 220, maxHeight: 220, borderRadius: 'var(--radius-card)' }} />
                   )}

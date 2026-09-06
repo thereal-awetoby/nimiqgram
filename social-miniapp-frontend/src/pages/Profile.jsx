@@ -5,6 +5,8 @@ import { getProfile, updateProfile, getStreaks, getFollowing, getFollowStatus, f
 import { uploadMedia } from '../lib/upload'
 import Avatar from '../components/Avatar'
 import LoadingHexagon from '../components/LoadingHexagon'
+import { formatPostDate } from '../lib/date'
+import VideoPreview from '../components/VideoPreview'
 
 function Profile() {
   const { user, token, isLoggedIn } = useAuth()
@@ -34,7 +36,7 @@ function Profile() {
 
   function ProfilePostMedia({ post }) {
     if (!post.mediaUrl) return null
-    if (post.mediaType === 'video') return <video src={post.mediaUrl} controls style={{ width: '100%', maxHeight: 260, marginTop: 8, borderRadius: 10 }} />
+    if (post.mediaType === 'video') return <VideoPreview src={post.mediaUrl} style={{ width: '100%', maxHeight: 260, marginTop: 8, borderRadius: 10 }} />
     return <img src={post.mediaUrl} alt="" style={{ display: 'block', width: '100%', maxHeight: 260, objectFit: 'cover', marginTop: 8, borderRadius: 10 }} />
   }
 
@@ -90,6 +92,7 @@ function Profile() {
   async function toggleFollow() {
     if (!isLoggedIn || !targetWallet || isOwnProfile) return
     setFollowLoading(true)
+    setError(null)
     try {
       if (isFollowing) {
         await unfollowUser(targetWallet, token)
@@ -180,8 +183,14 @@ function Profile() {
                   Edit profile
                 </button>
               ) : isLoggedIn ? (
-                <button onClick={toggleFollow} disabled={followLoading} style={{ background: isFollowing ? 'transparent' : 'var(--accent-color)', color: isFollowing ? 'var(--accent-color)' : 'var(--bg-color)', border: '1px solid var(--accent-color)', borderRadius: 20, padding: '7px 18px', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, opacity: followLoading ? 0.6 : 1, marginLeft: 'auto' }}>
-                  {followLoading ? '...' : isFollowing ? 'Following' : 'Follow'}
+                <button
+                  onClick={toggleFollow}
+                  disabled={followLoading}
+                  aria-label={isFollowing ? 'Unfollow user' : 'Follow user'}
+                  aria-pressed={isFollowing}
+                  style={{ background: isFollowing ? 'transparent' : 'var(--accent-color)', color: isFollowing ? 'var(--accent-color)' : 'var(--bg-color)', border: '1px solid var(--accent-color)', borderRadius: 20, padding: '7px 18px', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, opacity: followLoading ? 0.6 : 1, marginLeft: 'auto' }}
+                >
+                  {followLoading ? '...' : isFollowing ? 'Unfollow' : 'Follow'}
                 </button>
               ) : null}
             </div>
@@ -331,7 +340,22 @@ function Profile() {
             ) : profileTab === 'bookmarks' ? (
               tabData.bookmarks.length === 0 ? <p style={{ color: 'var(--text-muted)' }}>No bookmarks yet.</p> : tabData.bookmarks.map((post) => <div key={post.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--nav-border)' }}><div style={{ fontSize: 14, lineHeight: 1.4 }}>{post.text}</div><ProfilePostMedia post={post} /></div>)
             ) : (
-              (tabData[profileTab] || []).length === 0 ? <p style={{ color: 'var(--text-muted)' }}>{profileTab === 'likes' ? 'No liked posts yet.' : 'No posts yet.'}</p> : (tabData[profileTab] || []).map((post) => <div key={post.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--nav-border)' }}><div style={{ fontSize: 14, lineHeight: 1.4 }}>{post.text}</div><ProfilePostMedia post={post} /><div style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 4 }}>{post.author?.displayName || post.author?.username || post.author?.wallet}</div></div>)
+              (tabData[profileTab] || []).length === 0 ? <p style={{ color: 'var(--text-muted)' }}>{profileTab === 'likes' ? 'No liked posts yet.' : 'No posts yet.'}</p> : (tabData[profileTab] || []).map((post) => (
+                <div key={post.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--nav-border)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'baseline' }}>
+                    <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>{post.author?.displayName || post.author?.username || post.author?.wallet}</div>
+                    {formatPostDate(post.createdAt) && <time dateTime={post.createdAt} style={{ color: 'var(--text-muted)', fontSize: 11, whiteSpace: 'nowrap' }}>{formatPostDate(post.createdAt)}</time>}
+                  </div>
+                  <div style={{ fontSize: 14, lineHeight: 1.4, marginTop: 5 }}>{post.text}</div>
+                  <ProfilePostMedia post={post} />
+                  <div style={{ display: 'flex', gap: 14, marginTop: 9, color: 'var(--text-muted)', fontSize: 11.5 }}>
+                    <span>Likes {post.likeCount ?? 0}</span>
+                    <span>Comments {post.commentCount ?? 0}</span>
+                    <span>Tips {post.tipTotal ?? 0}</span>
+                    <span>Views {post.viewCount ?? 0}</span>
+                  </div>
+                </div>
+              ))
             )}
           </div>
         )}
