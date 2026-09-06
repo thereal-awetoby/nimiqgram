@@ -5,6 +5,7 @@ create table if not exists users (
   username text unique,
   bio text not null default '',
   avatar_url text,
+  banner_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

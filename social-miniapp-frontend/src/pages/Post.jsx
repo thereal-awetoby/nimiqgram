@@ -114,7 +114,13 @@ function Post() {
     }
 
     if (isLoggedIn && token) {
-      recordPostView(token, postId).catch(() => {})
+      recordPostView(token, postId)
+        .then((result) => {
+          if (!cancelled && result?.viewCount != null) {
+            setPost((current) => current ? { ...current, viewCount: result.viewCount } : current)
+          }
+        })
+        .catch(() => {})
     }
 
     return () => { cancelled = true }
@@ -191,7 +197,6 @@ function Post() {
             width: '100%',
             padding: '6px 2px 0',
             marginTop: 12,
-            borderTop: '1px solid var(--nav-border)',
             gap: 2,
           }}
         >
@@ -234,7 +239,10 @@ function Post() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {post.comments.map((comment, index) => (
               <div key={comment.id || index} style={{ paddingBottom: 12, borderBottom: '1px solid var(--nav-border)' }}>
-                <strong style={{ fontSize: 13 }}>{comment.author?.username || comment.authorWallet || 'User'}</strong>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+                  <strong style={{ fontSize: 13 }}>{comment.author?.username || comment.authorWallet || 'User'}</strong>
+                  {formatPostDate(comment.createdAt) && <time dateTime={comment.createdAt} style={{ color: 'var(--text-muted)', fontSize: 11 }}>{formatPostDate(comment.createdAt)}</time>}
+                </div>
                 <div style={{ marginTop: 4, lineHeight: 1.4 }}>{comment.text}</div>
               </div>
             ))}

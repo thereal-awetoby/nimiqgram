@@ -6,7 +6,7 @@ import { verifyTipTransaction } from "./nimiq-rpc.js";
 
 const walletSchema = z.object({ wallet: z.string().min(1).max(128) });
 const verifySchema = walletSchema.extend({ signature: z.string().min(1), publicKey: z.string().min(1).optional() });
-const profileSchema = z.object({ displayName: z.string().trim().min(1).max(64).optional(), username: z.string().trim().min(1).max(32), bio: z.string().max(280), avatarUrl: z.preprocess((value) => value === '' ? null : value, z.string().url().nullable().optional()) });
+const profileSchema = z.object({ displayName: z.string().trim().min(1).max(64).optional(), username: z.string().trim().min(1).max(32), bio: z.string().max(280), avatarUrl: z.preprocess((value) => value === '' ? null : value, z.string().url().nullable().optional()), bannerUrl: z.preprocess((value) => value === '' ? null : value, z.string().url().nullable().optional()) });
 const postSchema = z.object({
   text: z.string().trim().min(1).max(5000),
   mediaUrl: z.string().url().max(2048).nullable().optional(),
@@ -140,7 +140,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     const params = request.params as { wallet: string };
     const result = await pool.query(
       `select u.wallet, u.display_name, u.username, u.bio, u.avatar_url,
-              coalesce(s.badges, '[]'::jsonb) as badges,
+              u.banner_url, coalesce(s.badges, '[]'::jsonb) as badges,
               coalesce(s.current_streak, 0) as streak
        from users u left join streaks s on s.wallet = u.wallet where u.wallet = $1`,
       [params.wallet]
@@ -149,7 +149,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       return reply.notFound("profile not found");
     }
     const row = result.rows[0];
-    return { wallet: row.wallet, displayName: row.display_name, username: row.username, bio: row.bio, avatarUrl: row.avatar_url, badges: row.badges, streak: row.streak };
+    return { wallet: row.wallet, displayName: row.display_name, username: row.username, bio: row.bio, avatarUrl: row.avatar_url, bannerUrl: row.banner_url, badges: row.badges, streak: row.streak };
   });
 
   app.get("/users/:wallet/posts", async (request) => {
@@ -283,9 +283,9 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     const body = profileSchema.safeParse(request.body);
     if (!body.success) return reply.code(400).send({ error: body.error.flatten() });
     const result = await pool.query(
-      `update users set display_name = $1, username = $2, bio = $3, avatar_url = $4, updated_at = now()
-       where wallet = $5 returning wallet, display_name as "displayName", username, bio, avatar_url as "avatarUrl"`,
-      [body.data.displayName ?? body.data.username, body.data.username, body.data.bio, body.data.avatarUrl ?? null, session.wallet]
+      `update users set display_name = $1, username = $2, bio = $3, avatar_url = $4, banner_url = $5, updated_at = now()
+       where wallet = $6 returning wallet, display_name as "displayName", username, bio, avatar_url as "avatarUrl", banner_url as "bannerUrl"`,
+      [body.data.displayName ?? body.data.username, body.data.username, body.data.bio, body.data.avatarUrl ?? null, body.data.bannerUrl ?? null, session.wallet]
     );
     return result.rows[0];
   });
@@ -492,7 +492,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     const range = query.range === "weekly" ? "weekly" : query.range === "daily" ? "daily" : undefined;
     if (!range) return reply.code(400).send({ error: "range must be daily or weekly" });
     const interval = range === "daily" ? "1 day" : "7 days";
-    const [tippers, earners] = await Promise.all([
+    const [tippers, earners, streakers] = await Promise.all([
       pool.query(
         `select from_wallet as wallet, coalesce(u.username, from_wallet) as username, sum(amount_nim)::text as amount, count(*)::int as tips
          from tips t left join users u on u.wallet = t.from_wallet where t.status = 'verified' and t.created_at >= now() - $1::interval
@@ -502,9 +502,14 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
         `select to_wallet as wallet, coalesce(u.username, to_wallet) as username, sum(amount_nim)::text as amount, count(*)::int as tips
          from tips t left join users u on u.wallet = t.to_wallet where t.status = 'verified' and t.created_at >= now() - $1::interval
          group by to_wallet, u.username order by sum(amount_nim) desc limit 20`, [interval]
+      ),
+      pool.query(
+        `select s.wallet, coalesce(u.username, s.wallet) as username, s.current_streak as streak
+         from streaks s join users u on u.wallet = s.wallet
+         where s.current_streak > 0 order by s.current_streak desc, s.longest_streak desc limit 20`
       )
     ]);
-    return { range, topTippers: tippers.rows, topEarners: earners.rows };
+    return { range, topTippers: tippers.rows, topEarners: earners.rows, topStreakers: streakers.rows };
   });
 
   app.get("/notifications", async (request, reply) => {

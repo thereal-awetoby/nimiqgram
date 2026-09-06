@@ -45,10 +45,10 @@ export function getProfile(wallet) {
   return request(`/profile/${wallet}`)
 }
 
-export function updateProfile(token, { displayName, username, bio, avatarUrl }) {
+export function updateProfile(token, { displayName, username, bio, avatarUrl, bannerUrl }) {
   return authedRequest('/profile', token, {
     method: 'PUT',
-    body: JSON.stringify({ displayName, username, bio, avatarUrl }),
+    body: JSON.stringify({ displayName, username, bio, avatarUrl, bannerUrl }),
   })
 }
 
@@ -66,6 +66,10 @@ export function getFeed(cursor, token, scope = 'all') {
 
 export function getFollowing(wallet) {
   return request(`/users/${wallet}/following`)
+}
+
+export function getFollowers(wallet) {
+  return request(`/users/${wallet}/followers`)
 }
 
 export function getFollowStatus(wallet, token) {

@@ -5,6 +5,7 @@ export type User = {
   username: string | null;
   bio: string;
   avatarUrl: string | null;
+  bannerUrl: string | null;
   badges: string[];
   streak: number;
 };

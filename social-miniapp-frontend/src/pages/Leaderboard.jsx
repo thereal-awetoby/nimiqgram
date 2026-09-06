@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { getLeaderboard } from '../lib/api'
 import LoadingHexagon from '../components/LoadingHexagon'
 
-function LeaderboardTable({ title, list, emptyLabel }) {
+function LeaderboardTable({ title, list, emptyLabel, valueHeader = 'Amount', valueSuffix = 'NIM', valueKey = 'amount' }) {
   return (
     <div
       style={{
@@ -27,7 +27,7 @@ function LeaderboardTable({ title, list, emptyLabel }) {
             <tr>
               <th style={headStyle('left')}>Rank</th>
               <th style={headStyle('left')}>User</th>
-              <th style={headStyle('right')}>Amount</th>
+              <th style={headStyle('right')}>{valueHeader}</th>
             </tr>
           </thead>
           <tbody>
@@ -38,7 +38,7 @@ function LeaderboardTable({ title, list, emptyLabel }) {
                   {entry.username || entry.wallet}
                 </td>
                 <td style={{ ...cellStyle('right'), color: 'var(--accent-color)', fontFamily: 'var(--font-display)', fontWeight: 600 }}>
-                  {entry.total ?? entry.amount ?? entry.tipTotal} NIM
+                  {entry[valueKey] ?? entry.total ?? entry.tipTotal} {valueSuffix}
                 </td>
               </tr>
             ))}
@@ -74,6 +74,7 @@ function Leaderboard() {
   const [range, setRange] = useState('daily')
   const [topTippers, setTopTippers] = useState([])
   const [topEarners, setTopEarners] = useState([])
+  const [topStreakers, setTopStreakers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -87,6 +88,7 @@ function Leaderboard() {
         if (cancelled) return
         setTopTippers(data.topTippers || [])
         setTopEarners(data.topEarners || [])
+        setTopStreakers(data.topStreakers || [])
       })
       .catch((err) => {
         if (cancelled) return
@@ -101,7 +103,7 @@ function Leaderboard() {
   }, [range])
 
   return (
-    <div style={{ padding: 16, textAlign: 'center' }}>
+    <div style={{ padding: 16, textAlign: 'left' }}>
       <h2 style={{ margin: '0 0 16px' }}>Leaderboard</h2>
 
       <div
@@ -139,9 +141,10 @@ function Leaderboard() {
       {loading ? (
         <LoadingHexagon label="Loading leaderboard" />
       ) : (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 20, flexWrap: 'wrap', textAlign: 'left' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-start', gap: 20, flexWrap: 'wrap', textAlign: 'left' }}>
           <LeaderboardTable title="Top Tippers" list={topTippers} emptyLabel="No tips yet." />
           <LeaderboardTable title="Top Earners" list={topEarners} emptyLabel="No tips yet." />
+          <LeaderboardTable title="Top Streakers" list={topStreakers} emptyLabel="No streaks yet." valueHeader="Days" valueSuffix="days" valueKey="streak" />
         </div>
       )}
     </div>

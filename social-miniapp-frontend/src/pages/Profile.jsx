@@ -1,12 +1,46 @@
 import { useState, useEffect, useRef } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getProfile, updateProfile, getStreaks, getFollowing, getFollowStatus, followUser, unfollowUser, getProfilePosts, getProfileLikes, getTipActivity, getBookmarks } from '../lib/api'
+import { getProfile, updateProfile, getStreaks, getFollowing, getFollowers, getFollowStatus, followUser, unfollowUser, getProfilePosts, getProfileLikes, getTipActivity, getBookmarks } from '../lib/api'
 import { uploadMedia } from '../lib/upload'
 import Avatar from '../components/Avatar'
 import LoadingHexagon from '../components/LoadingHexagon'
 import { formatPostDate } from '../lib/date'
 import VideoPreview from '../components/VideoPreview'
+
+function HeartIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M12 21s-7.5-4.6-10-9.3C.5 8 2.2 4.5 6 4a5.6 5.6 0 0 1 6 3 5.6 5.6 0 0 1 6-3c3.8.5 5.5 4 4 7.7C19.5 16.4 12 21 12 21z" />
+    </svg>
+  )
+}
+
+function CommentIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M21 12a8 8 0 0 1-8 8H7l-4 3 1-4.5A8 8 0 1 1 21 12z" />
+    </svg>
+  )
+}
+
+function TipIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v10M9.5 9.3c0-1.1 1.1-2 2.5-2s2.5.7 2.5 1.8c0 2.5-5 1.7-5 4.2 0 1.1 1.1 1.9 2.5 1.9s2.5-.9 2.5-2" />
+    </svg>
+  )
+}
+
+function EyeIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  )
+}
 
 function Profile() {
   const { user, token, isLoggedIn } = useAuth()
@@ -17,17 +51,22 @@ function Profile() {
   const [username, setUsername] = useState('')
   const [bio, setBio] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
+  const [bannerUrl, setBannerUrl] = useState('')
   const [status, setStatus] = useState('idle')
   const [error, setError] = useState(null)
   const [profileLoading, setProfileLoading] = useState(true)
   const [mode, setMode] = useState('view') // 'view' | 'edit'
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [uploadingBanner, setUploadingBanner] = useState(false)
   const fileInputRef = useRef(null)
+  const bannerInputRef = useRef(null)
 
   const [streakData, setStreakData] = useState(null)
   const [streakLoading, setStreakLoading] = useState(true)
   const [following, setFollowing] = useState([])
+  const [followers, setFollowers] = useState([])
   const [followingLoading, setFollowingLoading] = useState(true)
+  const [peopleTab, setPeopleTab] = useState(null)
   const [isFollowing, setIsFollowing] = useState(false)
   const [followLoading, setFollowLoading] = useState(false)
   const [profileTab, setProfileTab] = useState('posts')
@@ -50,6 +89,7 @@ function Profile() {
         setUsername(profile.username || '')
         setBio(profile.bio || '')
         setAvatarUrl(profile.avatarUrl || '')
+        setBannerUrl(profile.bannerUrl || '')
         setMode(isOwnProfile && !profile.username ? 'edit' : 'view')
       })
       .catch((err) => console.error(err))
@@ -61,15 +101,14 @@ function Profile() {
       .catch((err) => console.error(err))
       .finally(() => setStreakLoading(false))
 
-    if (isOwnProfile) {
-      setFollowingLoading(true)
-      getFollowing(targetWallet)
-        .then((data) => setFollowing(data.users || []))
-        .catch((err) => console.error(err))
-        .finally(() => setFollowingLoading(false))
-    } else {
-      setFollowingLoading(false)
-    }
+    setFollowingLoading(true)
+    Promise.all([getFollowing(targetWallet), getFollowers(targetWallet)])
+      .then(([followingData, followersData]) => {
+        setFollowing(followingData.users || [])
+        setFollowers(followersData.users || [])
+      })
+      .catch((err) => console.error(err))
+      .finally(() => setFollowingLoading(false))
 
     if (isLoggedIn && !isOwnProfile) {
       getFollowStatus(targetWallet, token)
@@ -97,9 +136,11 @@ function Profile() {
       if (isFollowing) {
         await unfollowUser(targetWallet, token)
         setIsFollowing(false)
+        setFollowers((current) => current.filter((person) => person.wallet !== user.wallet))
       } else {
         await followUser(targetWallet, token)
         setIsFollowing(true)
+        setFollowers((current) => current.some((person) => person.wallet === user.wallet) ? current : [...current, { wallet: user.wallet, username: user.username }])
       }
     } catch (err) {
       setError(err.message)
@@ -125,12 +166,29 @@ function Profile() {
     }
   }
 
+  async function handleBannerSelect(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingBanner(true)
+    setError(null)
+    try {
+      const uploaded = await uploadMedia(file)
+      if (!uploaded.url) throw new Error('Image upload did not return a public URL.')
+      setBannerUrl(uploaded.url)
+    } catch (err) {
+      console.error(err)
+      setError(err.message)
+    } finally {
+      setUploadingBanner(false)
+    }
+  }
+
   async function handleSave() {
-    if (uploadingAvatar) return
+    if (uploadingAvatar || uploadingBanner) return
     setStatus('saving')
     setError(null)
     try {
-      await updateProfile(token, { displayName, username, bio, avatarUrl: avatarUrl.trim() || null })
+      await updateProfile(token, { displayName, username, bio, avatarUrl: avatarUrl.trim() || null, bannerUrl: bannerUrl.trim() || null })
       setStatus('saved')
       setMode('view')
     } catch (err) {
@@ -162,8 +220,8 @@ function Profile() {
               minHeight: 150,
               margin: 0,
               borderBottom: '1px solid var(--nav-border)',
-              background: avatarUrl
-                ? `linear-gradient(rgba(0,0,0,0.22), rgba(0,0,0,0.58)), url(${avatarUrl}) center/cover no-repeat`
+              background: (bannerUrl || avatarUrl)
+                ? `linear-gradient(rgba(0,0,0,0.22), rgba(0,0,0,0.58)), url(${bannerUrl || avatarUrl}) center/cover no-repeat`
                 : 'linear-gradient(135deg, rgba(242,183,5,0.3), rgba(94,93,255,0.2), rgba(14,165,233,0.16))',
               overflow: 'hidden',
             }}
@@ -199,10 +257,59 @@ function Profile() {
           <div style={{ padding: '16px 16px 0' }}>
             {bio && <p style={{ color: 'var(--text-muted)', fontSize: 14, lineHeight: 1.5, margin: '0 0 12px' }}>{bio}</p>}
             {!bio && isOwnProfile && <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: '0 0 12px' }}>Add a bio to tell people a little about you.</p>}
+
+            <div style={{ display: 'flex', gap: 8, marginTop: bio || isOwnProfile ? 0 : 12 }}>
+              {['followers', 'following'].map((tab) => {
+                const people = tab === 'followers' ? followers : following
+                const label = tab === 'followers' ? 'Followers' : 'Following'
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setPeopleTab((current) => current === tab ? null : tab)}
+                    aria-pressed={peopleTab === tab}
+                    style={{ background: peopleTab === tab ? 'var(--accent-color)' : 'transparent', color: peopleTab === tab ? 'var(--bg-color)' : 'var(--text-muted)', border: '1px solid var(--nav-border)', borderRadius: 16, padding: '6px 12px', fontSize: 12.5, fontWeight: 700 }}
+                  >
+                    {label} {people.length}
+                  </button>
+                )
+              })}
+            </div>
+
+            {peopleTab && (
+              <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {followingLoading ? <LoadingHexagon label={`Loading ${peopleTab}`} /> : (peopleTab === 'followers' ? followers : following).length === 0 ? (
+                  <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: 0 }}>No {peopleTab} yet.</p>
+                ) : (
+                  (peopleTab === 'followers' ? followers : following).map((person) => (
+                    <Link key={person.wallet} to={`/profile/${encodeURIComponent(person.wallet)}`} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 0', color: 'inherit' }}>
+                      <Avatar url={person.avatarUrl} fallback={person.username || person.wallet} size={30} />
+                      <span style={{ minWidth: 0 }}>
+                        <strong style={{ display: 'block', fontSize: 13 }}>{person.displayName || person.username || person.wallet}</strong>
+                        {person.username && <span style={{ color: 'var(--accent-color)', fontSize: 11 }}>@{person.username}</span>}
+                      </span>
+                    </Link>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         </>
       ) : (
         <div style={{ padding: 16 }}>
+          <div
+            onClick={() => bannerInputRef.current?.click()}
+            style={{
+              position: 'relative', height: 150, marginBottom: 18, borderRadius: 12, overflow: 'hidden', cursor: 'pointer',
+              background: (bannerUrl || avatarUrl)
+                ? `linear-gradient(rgba(0,0,0,0.18), rgba(0,0,0,0.48)), url(${bannerUrl || avatarUrl}) center/cover no-repeat`
+                : 'linear-gradient(135deg, rgba(242,183,5,0.3), rgba(94,93,255,0.2), rgba(14,165,233,0.16))',
+            }}
+          >
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 13, fontWeight: 700, textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>
+              {uploadingBanner ? 'Uploading...' : 'Change banner'}
+            </div>
+          </div>
+          <input ref={bannerInputRef} type="file" accept="image/*" onChange={handleBannerSelect} style={{ display: 'none' }} />
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', marginBottom: 12 }}>
             <div
               onClick={() => fileInputRef.current?.click()}
@@ -285,7 +392,7 @@ function Profile() {
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-start' }}>
             <button
               onClick={handleSave}
-              disabled={status === 'saving' || uploadingAvatar}
+              disabled={status === 'saving' || uploadingAvatar || uploadingBanner}
               style={{
                 background: 'var(--accent-color)',
                 color: 'var(--bg-color)',
@@ -294,10 +401,10 @@ function Profile() {
                 padding: '9px 28px',
                 fontFamily: 'var(--font-display)',
                 fontWeight: 600,
-                opacity: status === 'saving' || uploadingAvatar ? 0.6 : 1,
+                opacity: status === 'saving' || uploadingAvatar || uploadingBanner ? 0.6 : 1,
               }}
             >
-              {uploadingAvatar ? 'Uploading...' : status === 'saving' ? 'Saving...' : 'Save Profile'}
+              {uploadingAvatar || uploadingBanner ? 'Uploading...' : status === 'saving' ? 'Saving...' : 'Save Profile'}
             </button>
 
             {username && (
@@ -349,10 +456,10 @@ function Profile() {
                   <div style={{ fontSize: 14, lineHeight: 1.4, marginTop: 5 }}>{post.text}</div>
                   <ProfilePostMedia post={post} />
                   <div style={{ display: 'flex', gap: 14, marginTop: 9, color: 'var(--text-muted)', fontSize: 11.5 }}>
-                    <span>Likes {post.likeCount ?? 0}</span>
-                    <span>Comments {post.commentCount ?? 0}</span>
-                    <span>Tips {post.tipTotal ?? 0}</span>
-                    <span>Views {post.viewCount ?? 0}</span>
+                    <span title="Likes" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><HeartIcon /> {post.likeCount ?? 0}</span>
+                    <span title="Comments" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CommentIcon /> {post.commentCount ?? 0}</span>
+                    <span title="Tips" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><TipIcon /> {post.tipTotal ?? 0}</span>
+                    <span title="Views" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><EyeIcon /> {post.viewCount ?? 0}</span>
                   </div>
                 </div>
               ))

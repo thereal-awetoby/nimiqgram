@@ -109,9 +109,22 @@ function PostMedia({ url, type }) {
       if (!el) return
       if (el.paused) { el.play(); setPlaying(true) } else { el.pause(); setPlaying(false) }
     }
-    function goFullscreen(e) {
+    async function goFullscreen(e) {
+      e.preventDefault()
       e.stopPropagation()
-      videoRef.current?.requestFullscreen?.()
+      const video = videoRef.current
+      if (!video) return
+
+      try {
+        if (document.fullscreenElement) return
+        if (video.requestFullscreen) {
+          await video.requestFullscreen()
+        } else if (video.webkitEnterFullscreen) {
+          video.webkitEnterFullscreen()
+        }
+      } catch (error) {
+        console.error('Fullscreen is unavailable in this hosting environment', error)
+      }
     }
     return (
       <div style={{ position: 'relative', margin: '0 auto', maxWidth: '100%', borderRadius: 'var(--radius-card)', overflow: 'hidden' }} onClick={togglePlay}>
@@ -355,7 +368,7 @@ function Feed() {
   }
 
   return (
-    <div>
+    <div className="feed-page">
       {isLoggedIn ? (
         <div style={{ padding: `14px ${PAGE_PADDING}px 10px`, borderBottom: '1px solid var(--nav-border)' }}>
           <div style={{ display: 'flex', gap: 10 }}>
@@ -488,7 +501,10 @@ function Feed() {
                     {post.author?.username && <span style={{ color: 'var(--accent-color)', fontSize: 12, marginLeft: 6 }}>@{post.author.username}</span>}
                   </Link>
                   {formatPostDate(post.createdAt) && <time dateTime={post.createdAt} style={{ display: 'block', marginTop: 2, color: 'var(--text-muted)', fontSize: 11.5 }}>{formatPostDate(post.createdAt)}</time>}
-                  <Link to={`/post/${post.id}`} style={{ display: 'block', color: 'inherit' }}>
+                  <Link
+                    to={`/post/${post.id}`}
+                    style={{ display: 'block', color: 'inherit', padding: '8px 6px 12px', margin: '0 -6px' }}
+                  >
                     <p style={{ margin: '4px 0 7px', fontSize: 15, lineHeight: 1.4 }}>
                       {renderTextWithLinks(post.text || '')}
                     </p>
