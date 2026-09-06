@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import Avatar from '../components/Avatar'
 import LoadingHexagon from '../components/LoadingHexagon'
 import TipModal from '../components/TipModal'
+import { formatPostDate } from '../lib/date'
 
 function HeartIcon({ filled }) {
   return (
@@ -155,6 +156,7 @@ function Post() {
           <div>
             <strong>{post.author?.displayName || post.author?.username || post.author?.wallet}</strong>
             {post.author?.username && <div style={{ color: 'var(--accent-color)', fontSize: 12 }}>@{post.author.username}</div>}
+            {formatPostDate(post.createdAt) && <time dateTime={post.createdAt} style={{ display: 'block', marginTop: 2, color: 'var(--text-muted)', fontSize: 11.5 }}>{formatPostDate(post.createdAt)}</time>}
           </div>
         </Link>
 

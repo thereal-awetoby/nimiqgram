@@ -6,6 +6,7 @@ import { uploadMedia, getMediaType } from '../lib/upload'
 import TipModal from '../components/TipModal'
 import Avatar from '../components/Avatar'
 import LoadingHexagon from '../components/LoadingHexagon'
+import { formatPostDate } from '../lib/date'
 
 const MAX_VIDEO_SECONDS = 5 * 60
 const URL_REGEX = /(https?:\/\/[^\s]+)/g
@@ -485,6 +486,7 @@ function Feed() {
                     <strong style={{ fontSize: 14.5 }}>{post.author?.displayName || post.author?.username || post.author?.wallet}</strong>
                     {post.author?.username && <span style={{ color: 'var(--accent-color)', fontSize: 12, marginLeft: 6 }}>@{post.author.username}</span>}
                   </Link>
+                  {formatPostDate(post.createdAt) && <time dateTime={post.createdAt} style={{ display: 'block', marginTop: 2, color: 'var(--text-muted)', fontSize: 11.5 }}>{formatPostDate(post.createdAt)}</time>}
                   <Link to={`/post/${post.id}`} style={{ display: 'block', color: 'inherit' }}>
                     <p style={{ margin: '4px 0 7px', fontSize: 15, lineHeight: 1.4 }}>
                       {renderTextWithLinks(post.text || '')}
