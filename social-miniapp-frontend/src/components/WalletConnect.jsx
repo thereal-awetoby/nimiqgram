@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getChallenge, verifyAuth, getProfile } from '../lib/api'
+import Avatar from './Avatar'
 
 function truncateWallet(wallet) {
   if (!wallet) return ''
@@ -13,6 +14,29 @@ function WalletConnect() {
   const navigate = useNavigate()
   const [status, setStatus] = useState('idle')
   const [error, setError] = useState(null)
+  const [myAvatar, setMyAvatar] = useState(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
+
+  useEffect(() => {
+    if (!user?.wallet) {
+      setMyAvatar(null)
+      return
+    }
+    getProfile(user.wallet)
+      .then((p) => setMyAvatar(p.avatarUrl || null))
+      .catch(() => {})
+  }, [user])
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   async function handleConnect() {
     setStatus('connecting')
@@ -74,15 +98,52 @@ function WalletConnect() {
 
   if (isLoggedIn) {
     return (
-      <div style={pillStyle}>
-        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#3bc47c', flexShrink: 0 }} />
-        <span>{user?.username || truncateWallet(user?.wallet)}</span>
+      <div ref={menuRef} style={{ position: 'relative' }}>
         <button
-          onClick={logout}
-          style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: 12, padding: 0 }}
+          onClick={() => setMenuOpen((prev) => !prev)}
+          style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer' }}
         >
-          Disconnect
+          <Avatar url={myAvatar} fallback={user?.username || user?.wallet} size={36} />
         </button>
+
+        {menuOpen && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 44,
+              right: 0,
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--nav-border)',
+              borderRadius: 12,
+              overflow: 'hidden',
+              minWidth: 140,
+              zIndex: 100,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+            }}
+          >
+            <button
+              onClick={() => { setMenuOpen(false); navigate('/profile') }}
+              style={{
+                display: 'block', width: '100%', textAlign: 'left',
+                background: 'transparent', border: 'none', padding: '10px 14px',
+                fontFamily: 'var(--font-display)', fontSize: 13.5, color: 'var(--text-color)',
+              }}
+            >
+              Profile
+            </button>
+            <button
+              onClick={() => { setMenuOpen(false); logout() }}
+              style={{
+                display: 'block', width: '100%', textAlign: 'left',
+                background: 'transparent', border: 'none', padding: '10px 14px',
+                borderTop: '1px solid var(--nav-border)',
+                fontFamily: 'var(--font-display)', fontSize: 13.5, color: '#e0245e',
+              }}
+            >
+              Disconnect
+            </button>
+          </div>
+        )}
       </div>
     )
   }

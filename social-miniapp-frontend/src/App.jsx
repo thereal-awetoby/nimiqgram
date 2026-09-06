@@ -170,7 +170,6 @@ function App() {
             borderBottom: '1px solid var(--nav-border)',
           }}
         >
-          <WalletConnect />
           <button
             onClick={toggleTheme}
             style={{
@@ -189,6 +188,7 @@ function App() {
           >
             {theme === 'light' ? '🌙' : '☀️'}
           </button>
+          <WalletConnect />
         </div>
 
         <div style={{ paddingBottom: 90 }}>
