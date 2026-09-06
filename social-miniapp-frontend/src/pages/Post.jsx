@@ -1,9 +1,66 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { addComment, getPost, getBookmarkStatus, bookmarkPost, removeBookmark } from '../lib/api'
+import { addComment, getPost, getBookmarkStatus, bookmarkPost, removeBookmark, toggleLike, recordPostView } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import Avatar from '../components/Avatar'
 import LoadingHexagon from '../components/LoadingHexagon'
+import TipModal from '../components/TipModal'
+
+function HeartIcon({ filled }) {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+      <path d="M12 21s-7.5-4.6-10-9.3C.5 8 2.2 4.5 6 4a5.6 5.6 0 0 1 6 3 5.6 5.6 0 0 1 6-3c3.8.5 5.5 4 4 7.7C19.5 16.4 12 21 12 21z" />
+    </svg>
+  )
+}
+
+function CommentIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M21 12a8 8 0 0 1-8 8H7l-4 3 1-4.5A8 8 0 1 1 21 12z" />
+    </svg>
+  )
+}
+
+function TipIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v10M9.5 9.3c0-1.1 1.1-2 2.5-2s2.5.7 2.5 1.8c0 2.5-5 1.7-5 4.2 0 1.1 1.1 1.9 2.5 1.9s2.5-.9 2.5-2" />
+    </svg>
+  )
+}
+
+function EyeIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  )
+}
+
+function ActionButton({ onClick, disabled, active, children, color = 'var(--text-muted)' }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+        background: active ? 'rgba(184, 121, 14, 0.1)' : 'transparent',
+        border: 'none', borderRadius: 10, padding: '5px 6px',
+        color: active ? '#b6780a' : color,
+        cursor: disabled ? 'default' : 'pointer',
+        fontFamily: 'var(--font-body)', fontSize: 12.5, fontWeight: 600,
+        minWidth: 48,
+        flex: 1,
+        lineHeight: 1,
+      }}
+    >
+      {children}
+    </button>
+  )
+}
 
 function Post() {
   const { postId } = useParams()
@@ -14,13 +71,18 @@ function Post() {
   const [draft, setDraft] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [bookmarked, setBookmarked] = useState(false)
+  const [liked, setLiked] = useState(false)
+  const [tippingPost, setTippingPost] = useState(null)
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     getPost(postId)
       .then((data) => {
-        if (!cancelled) setPost(data)
+        if (!cancelled) {
+          setPost(data)
+          setLiked(Boolean(data.likedByMe))
+        }
       })
       .catch((err) => {
         if (!cancelled) setError(err.message)
@@ -28,9 +90,17 @@ function Post() {
       .finally(() => {
         if (!cancelled) setLoading(false)
       })
-    getBookmarkStatus(postId, token).then((data) => setBookmarked(Boolean(data.bookmarked))).catch(() => {})
+
+    if (token) {
+      getBookmarkStatus(postId, token).then((data) => setBookmarked(Boolean(data.bookmarked))).catch(() => {})
+    }
+
+    if (isLoggedIn && token) {
+      recordPostView(token, postId).catch(() => {})
+    }
+
     return () => { cancelled = true }
-  }, [postId, token])
+  }, [postId, token, isLoggedIn])
 
   async function toggleBookmark() {
     if (!isLoggedIn) return
@@ -38,6 +108,17 @@ function Post() {
       if (bookmarked) await removeBookmark(postId, token)
       else await bookmarkPost(postId, token)
       setBookmarked((value) => !value)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function handleLike() {
+    if (!isLoggedIn) return
+    try {
+      const result = await toggleLike(token, postId)
+      setLiked(Boolean(result.liked))
+      setPost((current) => current ? { ...current, likeCount: result.likeCount, likedByMe: result.liked } : current)
     } catch (err) {
       setError(err.message)
     }
@@ -81,11 +162,35 @@ function Post() {
         {post.mediaUrl && post.mediaType === 'video' && <video src={post.mediaUrl} controls style={{ width: '100%', maxHeight: 480, borderRadius: 12 }} />}
         {post.mediaUrl && post.mediaType !== 'video' && <img src={post.mediaUrl} alt="" style={{ display: 'block', width: '100%', maxHeight: 480, objectFit: 'contain', borderRadius: 12 }} />}
 
-        <div style={{ display: 'flex', gap: 18, marginTop: 14, color: 'var(--text-muted)', fontSize: 13 }}>
-          <span>{post.likeCount ?? 0} likes</span>
-          <span>{post.commentCount ?? 0} comments</span>
-          <span>{post.viewCount ?? 0} views</span>
-          {isLoggedIn && <button onClick={toggleBookmark} style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: bookmarked ? 'var(--accent-color)' : 'var(--text-muted)', fontWeight: 700 }}>{bookmarked ? 'Bookmarked' : 'Bookmark'}</button>}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            padding: '6px 2px 0',
+            marginTop: 12,
+            borderTop: '1px solid var(--nav-border)',
+            gap: 2,
+          }}
+        >
+          <ActionButton onClick={() => document.getElementById('post-comment-input')?.focus()} active={false} color="var(--comment-accent)">
+            <CommentIcon /> {post.commentCount ?? 0}
+          </ActionButton>
+          <ActionButton onClick={() => setTippingPost(post)} disabled={!isLoggedIn} color="var(--tip-accent)">
+            <TipIcon /> {post.tipTotal ?? 0}
+          </ActionButton>
+          <ActionButton onClick={handleLike} disabled={!isLoggedIn} active={liked} color="var(--like-accent)">
+            <HeartIcon filled={liked} /> {post.likeCount ?? 0}
+          </ActionButton>
+          <ActionButton disabled color="var(--view-accent)">
+            <EyeIcon /> {post.viewCount ?? 0}
+          </ActionButton>
+          {isLoggedIn && (
+            <ActionButton onClick={toggleBookmark} active={bookmarked} color="var(--accent-color)">
+              {bookmarked ? 'Saved' : 'Save'}
+            </ActionButton>
+          )}
         </div>
       </article>
 
@@ -93,7 +198,7 @@ function Post() {
         <h2 style={{ fontSize: 18, margin: '0 0 14px' }}>Comments</h2>
         {isLoggedIn ? (
           <form onSubmit={submitComment} style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-            <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Write a comment..." style={{ flex: 1 }} />
+            <input id="post-comment-input" value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Write a comment..." style={{ flex: 1 }} />
             <button type="submit" disabled={submitting || !draft.trim()} style={{ background: 'var(--accent-color)', color: 'var(--bg-color)', border: 'none', borderRadius: 8, padding: '0 14px', fontWeight: 700 }}>{submitting ? '...' : 'Reply'}</button>
           </form>
         ) : (
@@ -113,6 +218,19 @@ function Post() {
           </div>
         )}
       </section>
+
+      {tippingPost && (
+        <TipModal
+          post={tippingPost}
+          onClose={() => setTippingPost(null)}
+          onSuccess={(result) => {
+            if (result?.status === 'verified' && post && post.id === tippingPost.id) {
+              setPost((current) => ({ ...current, tipTotal: Number(current.tipTotal || 0) + Number(result.amount || 0) }))
+            }
+            setTippingPost(null)
+          }}
+        />
+      )}
     </div>
   )
 }

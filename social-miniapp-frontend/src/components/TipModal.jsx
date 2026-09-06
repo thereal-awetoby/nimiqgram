@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Transaction } from '@nimiq/core/web'
 import { useAuth } from '../context/AuthContext'
 import { sendTip } from '../lib/api'
 
@@ -13,19 +14,25 @@ function TipModal({ post, onClose, onSuccess }) {
     setError(null)
 
     try {
-      // TEMP: real payment (SDK-triggered Nimiq Pay transaction) not wired up yet.
-      // Using a fake txHash to test the /tips endpoint end-to-end until
-      // real wallet signing is confirmed and swapped in here.
-      const fakeTxHash = `dev-tx-${Date.now()}`
+      const { init } = await import('@nimiq/mini-app-sdk')
+      const nimiq = await init()
+      const serializedTransaction = await nimiq.sendBasicTransaction({
+        recipient: post.author?.wallet,
+        value: Math.round(Number(amount) * 100000),
+      })
+      if (serializedTransaction?.error) throw new Error(serializedTransaction.error.message || 'The wallet rejected the tip.')
+      if (typeof serializedTransaction !== 'string') throw new Error('The wallet did not return a transaction.')
+
+      const txHash = Transaction.fromAny(serializedTransaction).hash()
 
       const result = await sendTip(token, {
         toWallet: post.author?.wallet,
         postId: post.id,
         amount: Number(amount),
-        txHash: fakeTxHash,
+        txHash,
       })
 
-      setStatus('success')
+      setStatus(result.status === 'pending' ? 'pending' : 'success')
       onSuccess?.(result)
     } catch (err) {
       console.error(err)
@@ -59,9 +66,12 @@ function TipModal({ post, onClose, onSuccess }) {
       >
         <h3>Tip {post.author?.username || post.author?.wallet}</h3>
 
-        {status === 'success' ? (
+        {status === 'success' || status === 'pending' ? (
           <>
-            <p style={{ color: 'green' }}>Tip sent!</p>
+            <p style={{ color: status === 'pending' ? 'var(--accent-color)' : 'green' }}>
+              {status === 'pending' ? 'Tip submitted and awaiting blockchain verification.' : 'Tip sent!'}
+            </p>
+            {status === 'pending' && <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>The transaction was broadcast and will be marked verified once the network indexer sees it.</p>}
             <button onClick={onClose}>Close</button>
           </>
         ) : (

@@ -53,24 +53,38 @@ function WalletConnect() {
 
       const accounts = await nimiq.listAccounts()
       if (accounts?.error) throw new Error(accounts.error.message || 'Could not list accounts')
-      const wallet = accounts?.[0]
-      if (!wallet) throw new Error('No wallet account found.')
+      const claimedWallet = accounts?.[0]
+      if (!claimedWallet) throw new Error('No wallet account found.')
 
       setStatus('signing')
-      const challenge = await getChallenge(wallet)
+      // NOTE: this challenge is requested for `claimedWallet` (accounts[0]),
+      // but nimiq.sign() below has no way to pin which account actually
+      // signs — the SDK doesn't expose a "currently active account" getter.
+      // If sign() ends up using a different account than accounts[0], the
+      // backend will still verify correctly (it derives the real signer's
+      // address from the public key in the signature and trusts that over
+      // whatever wallet we claim here), but the wallet used for the session
+      // is the one returned in authResult below, not claimedWallet.
+      const challenge = await getChallenge(claimedWallet)
 
       const sigResult = await nimiq.sign({ message: challenge.message, isHex: false })
       if (sigResult?.error) throw new Error(sigResult.error.message || 'Signing failed or was rejected')
 
       const authResult = await verifyAuth({
-        wallet,
+        wallet: claimedWallet,
         publicKey: sigResult.publicKey,
         signature: sigResult.signature,
       })
 
+      // Trust the wallet the backend actually verified the signature against
+      // (derived from the public key) rather than the client-claimed
+      // accounts[0] — these can differ, and the derived one is the one the
+      // session/token is issued for.
+      const verifiedWallet = authResult?.wallet || claimedWallet
+
       login(authResult)
       try {
-        const profile = await getProfile(wallet)
+        const profile = await getProfile(verifiedWallet)
         if (!profile.username) navigate('/profile', { replace: true })
       } catch {
         navigate('/profile', { replace: true })
