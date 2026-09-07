@@ -296,6 +296,17 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     const scope = query.scope === "following" ? "following" : "all";
     const session = getSession(request);
     const viewerWallet = session?.wallet ?? null;
+    if (scope === "following" && session) {
+      const followingCount = await pool.query(
+        `select count(*)::int as count from follows where follower_wallet = $1`,
+        [session.wallet]
+      );
+
+      if (Number(followingCount.rows[0]?.count ?? 0) === 0) {
+        return { posts: [], nextCursor: null };
+      }
+    }
+
     const result = await pool.query(
       `with post_stats as (
          select
@@ -305,7 +316,6 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
            p.media_url,
            p.media_type,
            p.created_at,
-           u.wallet as author_wallet,
            u.display_name,
            u.username,
            u.bio,
