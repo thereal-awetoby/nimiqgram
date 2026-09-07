@@ -12,6 +12,8 @@
   "dependencies": {
     "@nimiq/core": "^2.21.0",
     "@nimiq/mini-app-sdk": "^0.1.0",
+    "blake2b": "^2.1.4",
+    "buffer": "^6.0.3",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.3"
