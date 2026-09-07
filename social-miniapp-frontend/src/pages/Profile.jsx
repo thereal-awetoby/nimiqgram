@@ -258,7 +258,7 @@ function Profile() {
             {bio && <p style={{ color: 'var(--text-muted)', fontSize: 14, lineHeight: 1.5, margin: '0 0 12px' }}>{bio}</p>}
             {!bio && isOwnProfile && <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: '0 0 12px' }}>Add a bio to tell people a little about you.</p>}
 
-            <div style={{ display: 'flex', gap: 8, marginTop: bio || isOwnProfile ? 0 : 12 }}>
+             <div style={{ display: 'flex', gap: 8, marginTop: bio || isOwnProfile ? 0 : 12, justifyContent: 'center' }}>
               {['followers', 'following'].map((tab) => {
                 const people = tab === 'followers' ? followers : following
                 const label = tab === 'followers' ? 'Followers' : 'Following'

@@ -12,12 +12,26 @@ function VideoPreview({ src, videoRef, controls = true, onLoadedData, style }) {
         canvas.height = video.videoHeight
         canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height)
         setPoster(canvas.toDataURL('image/jpeg', 0.82))
-      } catch {}
+      } catch (err) {
+        console.error('Poster capture failed (likely a CORS issue):', err)
+      }
     }
     onLoadedData?.(event)
   }
 
-  return <video ref={videoRef} src={src} poster={poster || undefined} preload="auto" playsInline controls={controls} onLoadedData={capturePoster} style={style} />
+  return (
+    <video
+      ref={videoRef}
+      src={src}
+      poster={poster || undefined}
+      preload="auto"
+      crossOrigin="anonymous"
+      playsInline
+      controls={controls}
+      onLoadedData={capturePoster}
+      style={style}
+    />
+  )
 }
 
 export default VideoPreview

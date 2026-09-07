@@ -50,8 +50,9 @@ function CommentIcon() {
 function TipIcon() {
   return (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v10M9.5 9.3c0-1.1 1.1-2 2.5-2s2.5.7 2.5 1.8c0 2.5-5 1.7-5 4.2 0 1.1 1.1 1.9 2.5 1.9s2.5-.9 2.5-2" />
+      <rect x="2" y="6" width="20" height="12" rx="2" />
+      <circle cx="12" cy="12" r="3" />
+      <path d="M6 9v0M18 15v0" />
     </svg>
   )
 }
@@ -544,11 +545,11 @@ function Feed() {
                     <ActionButton onClick={() => toggleComments(post.id)} active={cState?.open} compact color="var(--comment-accent)">
                       <CommentIcon /> {post.commentCount ?? 0}
                     </ActionButton>
-                    <ActionButton onClick={() => setTippingPost(post)} disabled={!isLoggedIn} compact color="var(--tip-accent)">
-                      <TipIcon /> {post.tipTotal ?? 0}
-                    </ActionButton>
                     <ActionButton onClick={() => handleLike(post.id)} disabled={!isLoggedIn} active={isLiked} compact color="var(--like-accent)">
                       <HeartIcon filled={isLiked} /> {post.likeCount ?? 0}
+                    </ActionButton>
+                    <ActionButton onClick={() => setTippingPost(post)} disabled={!isLoggedIn} compact color="var(--tip-accent)">
+                      <TipIcon /> {post.tipTotal ?? 0}
                     </ActionButton>
                     <ActionButton disabled compact color="var(--view-accent)">
                       <EyeIcon /> {post.viewCount ?? 0}

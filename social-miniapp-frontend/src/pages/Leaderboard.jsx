@@ -9,6 +9,8 @@ function LeaderboardTable({ title, list, emptyLabel, valueHeader = 'Amount', val
       style={{
         flex: '1 1 260px',
         minWidth: 240,
+        maxWidth: 320,
+        textAlign: 'left',
         border: '1px solid var(--nav-border)',
         borderRadius: 14,
         overflow: 'hidden',
@@ -106,7 +108,7 @@ function Leaderboard() {
   }, [range])
 
   return (
-    <div style={{ padding: 16, textAlign: 'left' }}>
+    <div style={{ padding: 16, textAlign: 'center' }}>
       <h2 style={{ margin: '0 0 16px' }}>Leaderboard</h2>
 
       <div
@@ -144,7 +146,7 @@ function Leaderboard() {
       {loading ? (
         <LoadingHexagon label="Loading leaderboard" />
       ) : (
-        <div style={{ display: 'flex', justifyContent: 'flex-start', gap: 20, flexWrap: 'wrap', textAlign: 'left' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 20, flexWrap: 'wrap' }}>
           <LeaderboardTable title="Top Tippers" list={topTippers} emptyLabel="No tips yet." />
           <LeaderboardTable title="Top Earners" list={topEarners} emptyLabel="No tips yet." />
           <LeaderboardTable title="Top Streakers" list={topStreakers} emptyLabel="No streaks yet." valueHeader="Days" valueSuffix="days" valueKey="streak" />

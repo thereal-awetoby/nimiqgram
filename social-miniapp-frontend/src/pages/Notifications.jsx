@@ -41,7 +41,7 @@ function Notifications() {
 
   if (!isLoggedIn) {
     return (
-      <div style={{ padding: 16, textAlign: 'left', color: 'var(--text-muted)' }}>
+      <div style={{ padding: 16, textAlign: 'center', color: 'var(--text-muted)' }}>
         Connect your wallet to see notifications.
       </div>
     )
@@ -58,7 +58,7 @@ function Notifications() {
   }
 
   return (
-    <div style={{ padding: 16, maxWidth: 420, margin: 0, textAlign: 'left' }}>
+    <div style={{ padding: 16, maxWidth: 420, margin: '0 auto', textAlign: 'center' }}>
       <h2 style={{ margin: '0 0 6px' }}>Notifications</h2>
       {unreadCount > 0 && (
         <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
