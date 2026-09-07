@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { getLeaderboard } from '../lib/api'
 import LoadingHexagon from '../components/LoadingHexagon'
 
@@ -35,7 +36,9 @@ function LeaderboardTable({ title, list, emptyLabel, valueHeader = 'Amount', val
               <tr key={entry.wallet || i}>
                 <td style={cellStyle('left')}>{i + 1}</td>
                 <td style={{ ...cellStyle('left'), maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {entry.username || entry.wallet}
+                  <Link to={`/profile/${encodeURIComponent(entry.wallet)}`} style={{ color: 'var(--link-color)', fontWeight: 600 }}>
+                    {entry.username || entry.wallet}
+                  </Link>
                 </td>
                 <td style={{ ...cellStyle('right'), color: 'var(--accent-color)', fontFamily: 'var(--font-display)', fontWeight: 600 }}>
                   {entry[valueKey] ?? entry.total ?? entry.tipTotal} {valueSuffix}

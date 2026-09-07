@@ -10,7 +10,7 @@ import VideoPreview from '../components/VideoPreview'
 
 function HeartIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
       <path d="M12 21s-7.5-4.6-10-9.3C.5 8 2.2 4.5 6 4a5.6 5.6 0 0 1 6 3 5.6 5.6 0 0 1 6-3c3.8.5 5.5 4 4 7.7C19.5 16.4 12 21 12 21z" />
     </svg>
   )
@@ -18,7 +18,7 @@ function HeartIcon() {
 
 function CommentIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
       <path d="M21 12a8 8 0 0 1-8 8H7l-4 3 1-4.5A8 8 0 1 1 21 12z" />
     </svg>
   )
@@ -26,7 +26,7 @@ function CommentIcon() {
 
 function TipIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
       <circle cx="12" cy="12" r="9" />
       <path d="M12 7v10M9.5 9.3c0-1.1 1.1-2 2.5-2s2.5.7 2.5 1.8c0 2.5-5 1.7-5 4.2 0 1.1 1.1 1.9 2.5 1.9s2.5-.9 2.5-2" />
     </svg>
@@ -35,7 +35,7 @@ function TipIcon() {
 
 function EyeIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
       <circle cx="12" cy="12" r="3" />
     </svg>
@@ -455,11 +455,11 @@ function Profile() {
                   </div>
                   <div style={{ fontSize: 14, lineHeight: 1.4, marginTop: 5 }}>{post.text}</div>
                   <ProfilePostMedia post={post} />
-                  <div style={{ display: 'flex', gap: 14, marginTop: 9, color: 'var(--text-muted)', fontSize: 11.5 }}>
-                    <span title="Likes" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><HeartIcon /> {post.likeCount ?? 0}</span>
-                    <span title="Comments" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CommentIcon /> {post.commentCount ?? 0}</span>
-                    <span title="Tips" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><TipIcon /> {post.tipTotal ?? 0}</span>
-                    <span title="Views" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><EyeIcon /> {post.viewCount ?? 0}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: 9, gap: 2, fontSize: 12.5, fontWeight: 600 }}>
+                    <span title="Comments" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: 'var(--comment-accent)' }}><CommentIcon /> {post.commentCount ?? 0}</span>
+                    <span title="Tips" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: 'var(--tip-accent)' }}><TipIcon /> {post.tipTotal ?? 0}</span>
+                    <span title="Likes" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: 'var(--like-accent)' }}><HeartIcon /> {post.likeCount ?? 0}</span>
+                    <span title="Views" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: 'var(--view-accent)' }}><EyeIcon /> {post.viewCount ?? 0}</span>
                   </div>
                 </div>
               ))

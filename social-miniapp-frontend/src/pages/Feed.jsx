@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getFeed, createPost, toggleLike, addComment, getPost, getProfile, recordPostView, getFollowing } from '../lib/api'
 import { uploadMedia, getMediaType } from '../lib/upload'
@@ -68,7 +68,7 @@ function EyeIcon() {
 function ActionButton({ onClick, disabled, active, children, compact = false, color = 'var(--text-muted)' }) {
   return (
     <button
-      onClick={onClick}
+      onClick={(event) => { event.stopPropagation(); onClick?.(event) }}
       disabled={disabled}
       className={disabled ? '' : 'tap-scale'}
       style={{
@@ -176,6 +176,7 @@ function PostMedia({ url, type }) {
 }
 
 function Feed() {
+  const navigate = useNavigate()
   const { token, isLoggedIn, user } = useAuth()
   const [posts, setPosts] = useState([])
   const [likedMap, setLikedMap] = useState({})
@@ -496,13 +497,20 @@ function Feed() {
           const cState = commentState[post.id]
           const isLiked = likedMap[post.id]
           return (
-            <div key={post.id} style={{ padding: `14px ${PAGE_PADDING}px`, borderBottom: '1px solid var(--nav-border)' }}>
+            <div
+              key={post.id}
+              onClick={() => navigate(`/post/${post.id}`)}
+              onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') navigate(`/post/${post.id}`) }}
+              role="link"
+              tabIndex={0}
+              style={{ padding: `14px ${PAGE_PADDING}px`, borderBottom: '1px solid var(--nav-border)', cursor: 'pointer' }}
+            >
               <div style={{ display: 'flex', gap: 10 }}>
-                <Link to={`/profile/${encodeURIComponent(post.author?.wallet || '')}`} aria-label={`Open ${post.author?.displayName || post.author?.username || 'profile'}`} style={{ height: 40 }}>
+                <Link onClick={(event) => event.stopPropagation()} to={`/profile/${encodeURIComponent(post.author?.wallet || '')}`} aria-label={`Open ${post.author?.displayName || post.author?.username || 'profile'}`} style={{ height: 40 }}>
                   <Avatar url={post.author?.avatarUrl} fallback={post.author?.username || post.author?.wallet} />
                 </Link>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <Link to={`/profile/${encodeURIComponent(post.author?.wallet || '')}`} style={{ color: 'inherit' }}>
+                  <Link onClick={(event) => event.stopPropagation()} to={`/profile/${encodeURIComponent(post.author?.wallet || '')}`} style={{ color: 'inherit' }}>
                     <strong style={{ fontSize: 14.5 }}>{post.author?.displayName || post.author?.username || post.author?.wallet}</strong>
                     {post.author?.username && <span style={{ color: 'var(--accent-color)', fontSize: 12, marginLeft: 6 }}>@{post.author.username}</span>}
                   </Link>
@@ -516,7 +524,7 @@ function Feed() {
                     </p>
 
                     {post.mediaUrl && (
-                      <div style={{ marginBottom: 10 }} onClick={(event) => event.preventDefault()}>
+                      <div style={{ marginBottom: 10 }} onClick={(event) => { event.preventDefault(); event.stopPropagation() }}>
                         <PostMedia url={post.mediaUrl} type={post.mediaType} />
                       </div>
                     )}
@@ -530,7 +538,6 @@ function Feed() {
                       width: '100%',
                       padding: '6px 2px 0',
                       marginTop: 2,
-                      borderTop: '1px solid var(--nav-border)',
                       gap: 2,
                     }}
                   >
@@ -552,7 +559,7 @@ function Feed() {
                   </div>
 
                   {cState?.open && (
-                    <div style={{ marginTop: 12, paddingLeft: 12, borderLeft: '2px solid var(--nav-border)' }}>
+                    <div onClick={(event) => event.stopPropagation()} style={{ marginTop: 12, paddingLeft: 12, borderLeft: '2px solid var(--nav-border)' }}>
                       {cState.loading ? (
                         <LoadingHexagon label="Loading comments" />
                       ) : cState.comments.length === 0 ? (

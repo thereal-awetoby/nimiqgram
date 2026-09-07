@@ -11,7 +11,7 @@
   --like-accent: #b8790e;
   --view-accent: #6b7075;
   --share-accent: #6b7075;
-  --honeycomb-line: rgba(184, 121, 14, 0.09);
+  --feed-overlay: rgba(250, 250, 248, 0.78);
 
   --radius-card: 14px;
   --radius-btn: 20px;
@@ -33,7 +33,7 @@
   --like-accent: #f2a93b;
   --view-accent: #b0b6bf;
   --share-accent: #b0b6bf;
-  --honeycomb-line: rgba(242, 169, 59, 0.1);
+  --feed-overlay: rgba(18, 18, 20, 0.68);
 }
 
 * {
@@ -229,11 +229,9 @@ textarea, input {
 .feed-page {
   background-color: var(--bg-color);
   background-image:
-    linear-gradient(30deg, var(--honeycomb-line) 12%, transparent 12.5%, transparent 87%, var(--honeycomb-line) 87.5%),
-    linear-gradient(150deg, var(--honeycomb-line) 12%, transparent 12.5%, transparent 87%, var(--honeycomb-line) 87.5%),
-    linear-gradient(30deg, var(--honeycomb-line) 12%, transparent 12.5%, transparent 87%, var(--honeycomb-line) 87.5%),
-    linear-gradient(150deg, var(--honeycomb-line) 12%, transparent 12.5%, transparent 87%, var(--honeycomb-line) 87.5%),
-    linear-gradient(60deg, var(--honeycomb-line) 25%, transparent 25.5%, transparent 75%, var(--honeycomb-line) 75%);
-  background-position: 0 0, 0 0, 24px 42px, 24px 42px, 0 0;
-  background-size: 48px 84px;
+    linear-gradient(var(--feed-overlay), var(--feed-overlay)),
+    url('/honeycomb-background.png');
+  background-position: center, center top;
+  background-size: auto, cover;
+  background-attachment: scroll, fixed;
 }

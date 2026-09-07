@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Transaction } from '@nimiq/core/web'
+import initCore, { Transaction } from '@nimiq/core/web'
 import { useAuth } from '../context/AuthContext'
 import { sendTip } from '../lib/api'
 
@@ -23,6 +23,7 @@ function TipModal({ post, onClose, onSuccess }) {
       if (serializedTransaction?.error) throw new Error(serializedTransaction.error.message || 'The wallet rejected the tip.')
       if (typeof serializedTransaction !== 'string') throw new Error('The wallet did not return a transaction.')
 
+      await initCore()
       const txHash = Transaction.fromAny(serializedTransaction).hash()
 
       const result = await sendTip(token, {
