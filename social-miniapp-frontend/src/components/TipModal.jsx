@@ -3,6 +3,60 @@ import initCore, { Transaction } from '@nimiq/core/web'
 import { useAuth } from '../context/AuthContext'
 import { sendTip } from '../lib/api'
 
+function normalizeHexString(value) {
+  if (typeof value !== 'string') return ''
+  return value.trim().replace(/^0x/i, '').replace(/\s+/g, '')
+}
+
+function decodeHexString(hex) {
+  if (!hex || hex.length % 2 !== 0) return null
+  try {
+    return Uint8Array.from(hex.match(/.{1,2}/g).map((byte) => Number.parseInt(byte, 16)))
+  } catch {
+    return null
+  }
+}
+
+function getTransactionHash(serializedTransaction) {
+  if (serializedTransaction == null) throw new Error('The wallet did not return a transaction.')
+
+  if (typeof serializedTransaction === 'object') {
+    const nested = serializedTransaction.transaction
+      ?? serializedTransaction.tx
+      ?? serializedTransaction.raw
+      ?? serializedTransaction.data
+      ?? serializedTransaction.serializedTransaction
+      ?? serializedTransaction.result
+    if (nested) return getTransactionHash(nested)
+
+    const directHash = serializedTransaction.hash
+      ?? serializedTransaction.txHash
+      ?? serializedTransaction.transactionHash
+    if (typeof directHash === 'string' && directHash.trim()) return normalizeHexString(directHash)
+  }
+
+  if (typeof serializedTransaction === 'string') {
+    const normalized = normalizeHexString(serializedTransaction)
+    if (!normalized) throw new Error('The wallet returned an empty transaction payload.')
+    if (normalized.length === 64 && /^[0-9a-fA-F]+$/.test(normalized)) return normalized
+
+    const bytes = decodeHexString(normalized)
+    if (bytes) {
+      try {
+        return Transaction.deserialize(bytes).hash()
+      } catch {
+        try {
+          return Transaction.fromAny(normalized).hash()
+        } catch {
+          throw new Error('The wallet returned a malformed transaction payload.')
+        }
+      }
+    }
+  }
+
+  throw new Error('The wallet returned a malformed transaction payload.')
+}
+
 function TipModal({ post, onClose, onSuccess }) {
   const { token } = useAuth()
   const [amount, setAmount] = useState('1')
@@ -21,10 +75,9 @@ function TipModal({ post, onClose, onSuccess }) {
         value: Math.round(Number(amount) * 100000),
       })
       if (serializedTransaction?.error) throw new Error(serializedTransaction.error.message || 'The wallet rejected the tip.')
-      if (typeof serializedTransaction !== 'string') throw new Error('The wallet did not return a transaction.')
 
       await initCore()
-      const txHash = Transaction.fromAny(serializedTransaction).hash()
+      const txHash = getTransactionHash(serializedTransaction)
 
       const result = await sendTip(token, {
         toWallet: post.author?.wallet,

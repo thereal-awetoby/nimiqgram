@@ -295,26 +295,91 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     const cursor = query.cursor ? new Date(query.cursor) : new Date();
     const scope = query.scope === "following" ? "following" : "all";
     const session = getSession(request);
-    const viewerWallet = session?.wallet ?? "__anonymous__";
-    const followingWallet = session?.wallet ?? "__anonymous__";
+    const viewerWallet = session?.wallet ?? null;
     const result = await pool.query(
-            `select p.id, p.text, p.media_url, p.media_type, p.created_at, u.wallet as author_wallet, u.display_name,
-              u.username,
-              u.bio, u.avatar_url,
-              count(distinct l.wallet)::int as like_count,
-              count(distinct c.id)::int as comment_count,
-              coalesce(sum(t.amount_nim) filter (where t.status = 'verified'), 0)::text as tip_total,
-              count(distinct v.viewer_wallet)::int as view_count,
-              exists(select 1 from likes l2 where l2.post_id = p.id and l2.wallet = $2) as liked_by_me
-       from posts p join users u on u.wallet = p.author_wallet
-       left join likes l on l.post_id = p.id
-       left join comments c on c.post_id = p.id
-       left join tips t on t.post_id = p.id
-       left join post_views v on v.post_id = p.id
-       where p.created_at < $1
-         and ($4 = 'all' or p.author_wallet in (select followed_wallet from follows where follower_wallet = $3))
-       group by p.id, u.wallet order by p.created_at desc limit 21`,
-      [cursor, viewerWallet, followingWallet, scope]
+      `with post_stats as (
+         select
+           p.id,
+           p.author_wallet,
+           p.text,
+           p.media_url,
+           p.media_type,
+           p.created_at,
+           u.wallet as author_wallet,
+           u.display_name,
+           u.username,
+           u.bio,
+           u.avatar_url,
+           count(distinct l.wallet)::int as like_count,
+           count(distinct c.id)::int as comment_count,
+           count(distinct b.wallet)::int as save_count,
+           coalesce(sum(t.amount_nim) filter (where t.status = 'verified'), 0)::numeric as verified_tip_total,
+           count(distinct t.id) filter (where t.status = 'verified')::int as verified_tip_count,
+           coalesce((select s.current_streak from streaks s where s.wallet = p.author_wallet), 0) as streak,
+           coalesce((select s.longest_streak from streaks s where s.wallet = p.author_wallet), 0) as longest_streak
+         from posts p
+         join users u on u.wallet = p.author_wallet
+         left join likes l on l.post_id = p.id
+         left join comments c on c.post_id = p.id
+         left join bookmarks b on b.post_id = p.id
+         left join tips t on t.post_id = p.id
+         where p.created_at < $1
+           and ($3 = 'all' or p.author_wallet in (select followed_wallet from follows where follower_wallet = $2))
+         group by p.id, u.wallet
+       ),
+       scored as (
+         select
+           ps.*, 
+           case
+             when $2 is null then 0.15
+             when ps.author_wallet = $2 then 1.0
+             when exists (select 1 from follows f where f.follower_wallet = $2 and f.followed_wallet = ps.author_wallet) then 1.0
+             else 0.25
+           end as follow_boost,
+           (
+             ln(1 + ps.verified_tip_count)
+             + 0.5 * ln(1 + ps.verified_tip_total)
+           ) as tip_score,
+           (
+             2 * ps.like_count + 5 * ps.comment_count + 6 * ps.save_count
+           ) as engagement_score,
+           exp(-((extract(epoch from (now() - ps.created_at)) / 3600) / 18)) as recency_score,
+           (
+             0.3 + 0.7 * least(ps.streak / 30.0, 1.0)
+           ) as creator_score
+         from post_stats ps
+       )
+       select
+         id,
+         author_wallet,
+         text,
+         media_url,
+         media_type,
+         created_at,
+         display_name,
+         username,
+         bio,
+         avatar_url,
+         like_count,
+         comment_count,
+         save_count,
+         verified_tip_total,
+         verified_tip_count,
+         streak,
+         (
+           35 * follow_boost +
+           25 * tip_score +
+           20 * least(engagement_score, 100) +
+           12 * recency_score +
+           8 * creator_score
+         ) as feed_score,
+         exists(select 1 from likes l2 where l2.post_id = id and l2.wallet = $2) as liked_by_me,
+         (select count(*)::int from post_views v where v.post_id = id) as view_count
+       from scored
+       where created_at >= now() - interval '30 days'
+       order by feed_score desc, created_at desc
+       limit 21`,
+      [cursor, viewerWallet, scope]
     );
     const hasMore = result.rows.length > 20;
     const rows = hasMore ? result.rows.slice(0, 20) : result.rows;
