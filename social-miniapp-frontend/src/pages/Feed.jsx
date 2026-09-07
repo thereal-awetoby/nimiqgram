@@ -371,7 +371,7 @@ function Feed() {
   }
 
   return (
-    <div className="feed-page">
+    <div>
       {isLoggedIn ? (
         <div style={{ padding: `14px ${PAGE_PADDING}px 10px`, borderBottom: '1px solid var(--nav-border)' }}>
           <div style={{ display: 'flex', gap: 10 }}>

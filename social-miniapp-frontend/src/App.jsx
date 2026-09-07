@@ -128,6 +128,17 @@ function BottomNav() {
   )
 }
 
+function HexWatermark() {
+  return (
+    <svg viewBox="0 0 400 350" className="hex-watermark" aria-hidden="true">
+      <polygon
+        points="100,10 300,10 390,175 300,340 100,340 10,175"
+        fill="var(--accent-color)"
+      />
+    </svg>
+  )
+}
+
 function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light')
   const [isBooting, setIsBooting] = useState(true)
@@ -166,7 +177,7 @@ function App() {
           position: 'relative',
         }}
       >
-        <div className="top-glow" />
+        <HexWatermark />
 
         <div
           className="glass-surface"
