@@ -9,4 +9,5 @@ unto the nexts
 
 finishing touches and many more
 taking notes
-making ui great and tipmodal
+making ui great and tipmodal 
+algorithm setting
