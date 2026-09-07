@@ -11,7 +11,8 @@
   --like-accent: #b8790e;
   --view-accent: #6b7075;
   --share-accent: #6b7075;
-  --feed-overlay: rgba(250, 250, 248, 0.78);
+  --feed-background: url('/honeycomb_background_light.png');
+  --feed-overlay: rgba(250, 250, 248, 0.52);
 
   --radius-card: 14px;
   --radius-btn: 20px;
@@ -33,6 +34,7 @@
   --like-accent: #f2a93b;
   --view-accent: #b0b6bf;
   --share-accent: #b0b6bf;
+  --feed-background: url('/honeycomb-background.png');
   --feed-overlay: rgba(18, 18, 20, 0.68);
 }
 
@@ -230,7 +232,7 @@ textarea, input {
   background-color: var(--bg-color);
   background-image:
     linear-gradient(var(--feed-overlay), var(--feed-overlay)),
-    url('/honeycomb-background.png');
+    var(--feed-background);
   background-position: center, center top;
   background-size: auto, cover;
   background-attachment: scroll, fixed;
