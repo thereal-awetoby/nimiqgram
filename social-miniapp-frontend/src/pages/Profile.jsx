@@ -442,7 +442,19 @@ function Profile() {
             {profileTab === 'activity' ? (
               <div>
                 {streakLoading ? <LoadingHexagon label="Loading activity" /> : <div style={{ display: 'flex', justifyContent: 'center', gap: 32, marginBottom: 18 }}><div><strong style={{ color: 'var(--accent-color)', fontSize: 22 }}>{streakData?.currentStreak || 0}</strong><div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Current streak</div></div><div><strong style={{ color: 'var(--accent-color)', fontSize: 22 }}>{streakData?.longestStreak || 0}</strong><div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Longest streak</div></div></div>}
-                {tabData.tips.length === 0 ? <p style={{ color: 'var(--text-muted)' }}>No tips sent yet.</p> : tabData.tips.map((tip) => <div key={tip.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--nav-border)' }}>{tip.status === 'pending' ? 'Tip pending for' : 'Tipped'} <strong>{tip.display_name || tip.username || tip.to_wallet}</strong> <span style={{ color: 'var(--accent-color)' }}>{tip.amount} NIM</span><div style={{ color: 'var(--text-muted)', fontSize: 11 }}>{tip.status === 'pending' ? 'Awaiting blockchain verification' : tip.status}</div></div>)}
+                {tabData.tips.length === 0 ? <p style={{ color: 'var(--text-muted)' }}>No tip activity yet.</p> : tabData.tips.map((tip) => {
+                  const isReceived = tip.kind === 'received';
+                  const counterparty = isReceived ? (tip.from_display_name || tip.from_username || tip.from_wallet || tip.counterparty_wallet) : (tip.to_display_name || tip.to_username || tip.to_wallet || tip.counterparty_wallet);
+                  const actionLabel = isReceived ? 'Tip received from' : 'Tip sent to';
+                  return (
+                    <div key={tip.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--nav-border)' }}>
+                      <span>{tip.status === 'pending' ? actionLabel : isReceived ? 'Received from' : 'Sent to'} </span>
+                      <strong>{counterparty}</strong>
+                      <span style={{ color: 'var(--accent-color)', marginLeft: 8 }}>{tip.amount} NIM</span>
+                      <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>{tip.status === 'pending' ? 'Awaiting blockchain verification' : tip.status}</div>
+                    </div>
+                  )
+                })}
               </div>
             ) : profileTab === 'bookmarks' ? (
               tabData.bookmarks.length === 0 ? <p style={{ color: 'var(--text-muted)' }}>No bookmarks yet.</p> : tabData.bookmarks.map((post) => <div key={post.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--nav-border)' }}><div style={{ fontSize: 14, lineHeight: 1.4 }}>{post.text}</div><ProfilePostMedia post={post} /></div>)

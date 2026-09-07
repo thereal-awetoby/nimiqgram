@@ -179,8 +179,24 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   app.get("/users/:wallet/tip-activity", async (request) => {
     const params = request.params as { wallet: string };
     const result = await pool.query(
-      `select t.id, t.amount_nim::text as amount, t.status, t.created_at, t.to_wallet, u.display_name, u.username
-       from tips t join users u on u.wallet = t.to_wallet where t.from_wallet = $1 order by t.created_at desc limit 50`,
+      `select t.id,
+              t.amount_nim::text as amount,
+              t.status,
+              t.created_at,
+              t.to_wallet,
+              t.from_wallet,
+              case when t.to_wallet = $1 then 'received' else 'sent' end as kind,
+              u_to.display_name as to_display_name,
+              u_to.username as to_username,
+              u_from.display_name as from_display_name,
+              u_from.username as from_username,
+              coalesce(u_to.wallet, t.to_wallet) as counterparty_wallet,
+              coalesce(u_from.wallet, t.from_wallet) as counterpart_from_wallet
+       from tips t
+       left join users u_to on u_to.wallet = t.to_wallet
+       left join users u_from on u_from.wallet = t.from_wallet
+       where t.from_wallet = $1 or t.to_wallet = $1
+       order by t.created_at desc limit 50`,
       [params.wallet]
     );
     return { tips: result.rows };
@@ -535,12 +551,10 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
        returning id, from_wallet, to_wallet, post_id, amount_nim::text as amount, tx_hash, status, created_at`,
       [session.wallet, body.data.toWallet, body.data.postId ?? null, body.data.amount, body.data.txHash, status]
     );
-    if (verified) {
-      await pool.query(
-        `insert into notifications (recipient_wallet, actor_wallet, type, post_id) values ($1, $2, 'tip', $3)`,
-        [body.data.toWallet, session.wallet, body.data.postId ?? null]
-      );
-    }
+    await pool.query(
+      `insert into notifications (recipient_wallet, actor_wallet, type, post_id) values ($1, $2, 'tip', $3)`,
+      [body.data.toWallet, session.wallet, body.data.postId ?? null]
+    );
     return reply.code(verified ? 201 : 202).send({ ...result.rows[0], message: verified ? "Tip verified on-chain" : "Tip recorded and awaiting on-chain verification" });
   });
 
@@ -555,10 +569,6 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     const verified = await verifyTipTransaction(tip.rows[0]);
     if (!verified) return reply.code(202).send({ ...tip.rows[0], message: "Tip is not visible as a matching on-chain transaction yet" });
     const result = await pool.query(`update tips set status = 'verified', verified_at = now() where id = $1 returning id, from_wallet, to_wallet, post_id, amount_nim::text as amount, tx_hash, status, verified_at`, [params.id]);
-    await pool.query(
-      `insert into notifications (recipient_wallet, actor_wallet, type, post_id) values ($1, $2, 'tip', $3)`,
-      [tip.rows[0].to_wallet, session.wallet, tip.rows[0].post_id]
-    );
     return result.rows[0];
   });
 

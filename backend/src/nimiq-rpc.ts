@@ -13,9 +13,16 @@ type RpcResponse = {
 };
 
 function nimToLunas(amountNim: string): bigint {
-  const [whole, fraction = ""] = amountNim.split(".");
+  const [whole, fraction = ""] = amountNim.trim().split(".");
   const normalizedFraction = fraction.padEnd(5, "0").slice(0, 5);
-  return BigInt(whole) * 100000n + BigInt(normalizedFraction);
+  return BigInt(whole || "0") * 100000n + BigInt(normalizedFraction || "0");
+}
+
+function normalizeWallet(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim();
+  if (!normalized) return undefined;
+  return normalized.toLowerCase();
 }
 
 export async function verifyTipTransaction(input: TipVerificationInput): Promise<boolean> {
@@ -34,12 +41,22 @@ export async function verifyTipTransaction(input: TipVerificationInput): Promise
     const transaction = payload.result;
     if (!transaction || payload.error) return false;
 
-    const sender = typeof transaction.sender === "string" ? transaction.sender : undefined;
-    const recipient = typeof transaction.recipient === "string" ? transaction.recipient : undefined;
-    if (sender !== input.fromWallet || recipient !== input.toWallet) return false;
+    const sender = normalizeWallet(transaction.sender ?? transaction.from);
+    const recipient = normalizeWallet(transaction.recipient ?? transaction.to);
+    const expectedSender = normalizeWallet(input.fromWallet);
+    const expectedRecipient = normalizeWallet(input.toWallet);
 
-    const value = typeof transaction.value === "number" || typeof transaction.value === "string" ? BigInt(transaction.value) : undefined;
-    return value === nimToLunas(input.amountNim);
+    if (sender !== expectedSender || recipient !== expectedRecipient) return false;
+
+    const rawValue = transaction.value ?? transaction.amount;
+    let txValue: bigint | undefined;
+    if (typeof rawValue === "string") {
+      txValue = BigInt(rawValue);
+    } else if (typeof rawValue === "number") {
+      txValue = BigInt(Math.trunc(rawValue));
+    }
+
+    return txValue === nimToLunas(input.amountNim);
   } catch (err) {
     console.error("Tip verification failed (treating as unverified/pending):", err);
     return false;
