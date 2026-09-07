@@ -60,7 +60,7 @@ function getTransactionHash(serializedTransaction) {
 function TipModal({ post, onClose, onSuccess }) {
   const { token } = useAuth()
   const [amount, setAmount] = useState('1')
-  const [status, setStatus] = useState('idle') // idle | sending | success | error
+  const [status, setStatus] = useState('idle') // idle | sending | pending | success | error
   const [error, setError] = useState(null)
 
   async function handleSendTip() {
@@ -86,7 +86,11 @@ function TipModal({ post, onClose, onSuccess }) {
         txHash,
       })
 
-      setStatus(result.status === 'pending' ? 'pending' : 'success')
+      if (result?.status === 'verified') {
+        setStatus('success')
+      } else {
+        setStatus('pending')
+      }
       onSuccess?.(result)
     } catch (err) {
       console.error(err)
@@ -123,9 +127,13 @@ function TipModal({ post, onClose, onSuccess }) {
         {status === 'success' || status === 'pending' ? (
           <>
             <p style={{ color: status === 'pending' ? 'var(--accent-color)' : 'green' }}>
-              {status === 'pending' ? 'Tip submitted and awaiting blockchain verification.' : 'Tip sent!'}
+              {status === 'pending' ? 'Tip broadcast successfully. Waiting for blockchain confirmation.' : 'Tip confirmed on-chain.'}
             </p>
-            {status === 'pending' && <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>The transaction was broadcast and will be marked verified once the network indexer sees it.</p>}
+            {status === 'pending' && (
+              <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+                Your wallet has already sent the transaction. We are waiting for the network to confirm it before marking it as complete.
+              </p>
+            )}
             <button onClick={onClose}>Close</button>
           </>
         ) : (
