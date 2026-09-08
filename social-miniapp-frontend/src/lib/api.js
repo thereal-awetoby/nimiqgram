@@ -124,7 +124,10 @@ export function sendTip(token, { toWallet, postId, amount, txHash }) {
 }
 
 export function verifyTip(token, tipId) {
-  return authedRequest(`/tips/${tipId}/verify`, token, { method: 'POST' })
+  return authedRequest(`/tips/${tipId}/verify`, token, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  })
 }
 
 export function getLeaderboard(range = 'daily') {
