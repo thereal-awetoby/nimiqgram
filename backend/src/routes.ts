@@ -15,7 +15,7 @@ const postSchema = z.object({
   message: "mediaUrl and mediaType must be provided together"
 });
 const commentSchema = z.object({ text: z.string().trim().min(1).max(1000) });
-const tipSchema = z.object({ toWallet: walletSchema.shape.wallet, postId: z.string().uuid().optional(), amount: z.coerce.number().positive(), txHash: z.string().trim().regex(/^0x?[0-9a-fA-F]{64}$/, "txHash must be a 32-byte hexadecimal transaction hash") });
+const tipSchema = z.object({ toWallet: walletSchema.shape.wallet, postId: z.string().uuid().optional(), amount: z.coerce.number().positive(), txHash: z.string().trim().toLowerCase().regex(/^[0-9a-f]{64}$/, "txHash must be a 32-byte hexadecimal transaction hash") });
 const notificationReadSchema = z.object({ ids: z.array(z.string().uuid()).optional() });
 
 function getSession(request: { headers: { authorization?: string } }): { wallet: string } | undefined {

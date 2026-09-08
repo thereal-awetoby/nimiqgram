@@ -120,13 +120,18 @@ function TipModal({ post, onClose, onSuccess }) {
 
       await initCore()
       const txHash = getTransactionHash(serializedTransaction)
-      throw new Error(`DEBUG txHash="${txHash}" length=${txHash.length}`)
-      const result = await sendTip(token, {
-        toWallet: post.author?.wallet,
-        postId: post.id,
-        amount: Number(amount),
-        txHash,
-      })
+
+      let result
+      try {
+        result = await sendTip(token, {
+          toWallet: post.author?.wallet,
+          postId: post.id,
+          amount: Number(amount),
+          txHash,
+        })
+      } catch (err) {
+        throw new Error(`DEBUG SEND FAILED txHash="${txHash}" (len ${txHash.length}) — ${err.message}`)
+      }
 
       if (result?.status === 'verified') {
         setStatus('success')
