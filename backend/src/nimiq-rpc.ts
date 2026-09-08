@@ -12,6 +12,28 @@ type RpcResponse = {
   error?: { message?: string };
 };
 
+async function getTransactionByHash(txHash: string): Promise<RpcResponse> {
+  const request = async (params: unknown): Promise<RpcResponse> => {
+    const response = await fetch(config.NIMIQ_RPC_URL!, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method: "getTransactionByHash", params })
+    });
+
+    if (!response.ok) {
+      throw new Error(`RPC HTTP ${response.status}`);
+    }
+
+    return await response.json() as RpcResponse;
+  };
+
+  const arrayResponse = await request([txHash]);
+  if (arrayResponse.error?.message !== "Invalid params") return arrayResponse;
+
+  console.warn("Nimiq RPC rejected array parameters; retrying object parameters");
+  return request({ hash: txHash });
+}
+
 function describeTransaction(transaction: Record<string, unknown>): string {
   return JSON.stringify({
     hash: transaction.hash,
@@ -43,18 +65,7 @@ export async function verifyTipTransaction(input: TipVerificationInput): Promise
   if (!config.NIMIQ_RPC_URL) return false;
 
   try {
-    const response = await fetch(config.NIMIQ_RPC_URL, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method: "getTransactionByHash", params: [input.txHash] })
-    });
-
-    if (!response.ok) {
-      console.error(`Tip verification RPC returned HTTP ${response.status}`);
-      return false;
-    }
-
-    const payload = await response.json() as RpcResponse;
+    const payload = await getTransactionByHash(input.txHash);
     if (payload.error) {
       console.error("Tip verification RPC error:", payload.error.message ?? "unknown RPC error");
       return false;
