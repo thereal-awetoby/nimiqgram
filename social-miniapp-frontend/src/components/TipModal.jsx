@@ -8,6 +8,11 @@ function normalizeHexString(value) {
   return value.trim().replace(/^0x/i, '').replace(/\s+/g, '').toLowerCase()
 }
 
+function normalizeWalletAddress(value) {
+  if (typeof value !== 'string') return ''
+  return value.replace(/\s+/g, '').toLowerCase()
+}
+
 function requireTransactionHash(value) {
   const hash = normalizeHexString(value)
   if (!/^[0-9a-f]{64}$/.test(hash)) throw new Error('The wallet returned an invalid transaction hash.')
@@ -65,8 +70,39 @@ function getTransactionHash(serializedTransaction) {
   throw new Error('The wallet returned a malformed transaction payload.')
 }
 
+// Resolves the actual on-chain sender of the broadcast transaction, independent
+// of getTransactionHash — sendBasicTransaction has no sender param, so the
+// active Nimiq Pay account at send-time can silently differ from the account
+// that signed the login challenge. Returns null if the payload can't be parsed
+// (never blocks the tip on its own — only used as a warning guard below).
+function getTransactionSender(serializedTransaction) {
+  const hex = typeof serializedTransaction === 'string'
+    ? normalizeHexString(serializedTransaction)
+    : normalizeHexString(
+        serializedTransaction?.transaction
+        ?? serializedTransaction?.tx
+        ?? serializedTransaction?.raw
+        ?? serializedTransaction?.data
+        ?? serializedTransaction?.serializedTransaction
+        ?? serializedTransaction?.result
+      )
+  if (!hex) return null
+
+  try {
+    return Transaction.fromAny(hex).sender.toUserFriendlyAddress()
+  } catch {
+    const bytes = decodeHexString(hex)
+    if (!bytes) return null
+    try {
+      return Transaction.deserialize(bytes).sender.toUserFriendlyAddress()
+    } catch {
+      return null
+    }
+  }
+}
+
 function TipModal({ post, onClose, onSuccess }) {
-  const { token } = useAuth()
+  const { token, user } = useAuth()
   const [amount, setAmount] = useState('1')
   const [status, setStatus] = useState('idle') // idle | sending | pending | success | error
   const [pendingTipId, setPendingTipId] = useState(null)
@@ -121,6 +157,17 @@ function TipModal({ post, onClose, onSuccess }) {
       await initCore()
       const txHash = getTransactionHash(serializedTransaction)
 
+      // Guard: sendBasicTransaction has no sender parameter, so it uses
+      // whichever Nimiq Pay account is active right now — which can differ
+      // from the account that signed the login challenge. If they differ,
+      // this tip can never verify server-side (the backend trusts the
+      // session's wallet, not the client), so catch it before submitting.
+      const actualSender = normalizeWalletAddress(getTransactionSender(serializedTransaction))
+      const loggedInWallet = normalizeWalletAddress(user?.wallet)
+      if (actualSender && loggedInWallet && actualSender !== loggedInWallet) {
+        throw new Error('This tip was sent from a different Nimiq Pay account than the one you\'re logged in with. Switch to your logged-in account in Nimiq Pay and try again.')
+      }
+
       let result
       try {
         result = await sendTip(token, {
@@ -130,7 +177,7 @@ function TipModal({ post, onClose, onSuccess }) {
           txHash,
         })
       } catch (err) {
-        throw new Error(`DEBUG SEND FAILED txHash="${txHash}" (len ${txHash.length}) — ${err.message}`)
+        throw new Error(err.message)
       }
 
       if (result?.status === 'verified') {
