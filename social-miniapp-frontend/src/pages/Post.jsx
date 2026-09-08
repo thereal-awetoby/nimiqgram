@@ -261,8 +261,8 @@ function Post() {
           onSuccess={(result) => {
             if (result?.status === 'verified' && post && post.id === tippingPost.id) {
               setPost((current) => ({ ...current, tipTotal: Number(current.tipTotal || 0) + Number(result.amount || 0) }))
+              setTippingPost(null)
             }
-            setTippingPost(null)
           }}
         />
       )}

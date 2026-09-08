@@ -32,14 +32,15 @@ export async function verifyTipTransaction(input: TipVerificationInput): Promise
     const response = await fetch(config.NIMIQ_RPC_URL, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method: "getTransactionByHash", params: { hash: input.txHash } })
+      body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method: "getTransactionByHash", params: [input.txHash] })
     });
 
     if (!response.ok) return false;
 
     const payload = await response.json() as RpcResponse;
-    const transaction = payload.result;
-    if (!transaction || payload.error) return false;
+    if (!payload.result || payload.error) return false;
+    const transaction = (payload.result.transaction as Record<string, unknown> | undefined) ?? payload.result;
+    if (payload.result.executionResult === false) return false;
 
     const sender = normalizeWallet(transaction.sender ?? transaction.from);
     const recipient = normalizeWallet(transaction.recipient ?? transaction.to);

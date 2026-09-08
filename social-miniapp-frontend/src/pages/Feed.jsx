@@ -604,8 +604,10 @@ function Feed() {
           post={tippingPost}
           onClose={() => setTippingPost(null)}
           onSuccess={(result) => {
-            setPosts((prev) => prev.map((post) => post.id === tippingPost.id ? { ...post, tipTotal: result.status === 'verified' ? (Number(post.tipTotal || 0) + Number(result.amount || 0)).toString() : post.tipTotal } : post))
-            setTippingPost(null)
+            if (result?.status === 'verified') {
+              setPosts((prev) => prev.map((post) => post.id === tippingPost.id ? { ...post, tipTotal: (Number(post.tipTotal || 0) + Number(result.amount || 0)).toString() } : post))
+              setTippingPost(null)
+            }
           }}
         />
       )}

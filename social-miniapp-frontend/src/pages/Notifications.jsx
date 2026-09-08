@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getNotifications, markNotificationsRead } from '../lib/api'
 import LoadingHexagon from '../components/LoadingHexagon'
+import { formatPostDate } from '../lib/date'
 
 function Notifications() {
   const { token, isLoggedIn } = useAuth()
@@ -111,7 +112,10 @@ function Notifications() {
               }}
             >
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: n.readAt ? 'var(--nav-border)' : 'var(--accent-color)', flexShrink: 0 }} />
-              <span>{notificationText(n)}</span>
+              <span style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span>{notificationText(n)}</span>
+                {formatPostDate(n.createdAt) && <time dateTime={n.createdAt} style={{ color: 'var(--text-muted)', fontSize: 11, fontWeight: 400 }}>{formatPostDate(n.createdAt)}</time>}
+              </span>
             </Link>
           ))}
         </div>
