@@ -1,4 +1,5 @@
 import { config } from "./config.js";
+import { HashedTimeLockedContract } from "@nimiq/core";
 
 export type TipVerificationInput = {
   txHash: string;
@@ -95,6 +96,21 @@ export async function verifyTipTransaction(input: TipVerificationInput): Promise
         nestedTransactionType: typeof nestedTransaction
       });
       return false;
+    }
+
+    // TEMPORARY DEBUG — decode the HTLC settlement proof to find the real funder
+    if (transaction.proof) {
+      try {
+        const proofBytes = typeof transaction.proof === "string"
+          ? Uint8Array.from(Buffer.from(transaction.proof, "hex"))
+          : undefined;
+        if (proofBytes) {
+          const decodedProof = HashedTimeLockedContract.proofToPlain(proofBytes);
+          console.log("DEBUG decoded HTLC proof:", JSON.stringify(decodedProof, null, 2));
+        }
+      } catch (err) {
+        console.log("DEBUG proof decode failed (maybe not an HTLC proof):", err);
+      }
     }
 
     // executionResult lives on the transaction object itself in the Albatross shape.
