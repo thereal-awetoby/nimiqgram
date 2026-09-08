@@ -32,6 +32,7 @@ function describeTransaction(transaction: Record<string, unknown>): string {
     hash: transaction.hash,
     from: transaction.from,
     fromAddress: transaction.fromAddress,
+    fromType: transaction.fromType,
     sender: transaction.sender,
     to: transaction.to,
     toAddress: transaction.toAddress,
@@ -51,8 +52,9 @@ function nimToLunas(amountNim: string): bigint {
 
 function normalizeWallet(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
-  // Nimiq RPC returns addresses in spaced human-readable form
-  // (e.g. "NQ12 FBBY GJ2V ..."), so strip all whitespace before comparing.
+  // Nimiq RPC (and decoded HTLC proofs) return addresses in spaced
+  // human-readable form (e.g. "NQ12 FBBY GJ2V ..."), so strip all
+  // whitespace before comparing.
   const normalized = value.replace(/\s+/g, "").trim();
   if (!normalized) return undefined;
   return normalized.toLowerCase();
@@ -98,36 +100,44 @@ export async function verifyTipTransaction(input: TipVerificationInput): Promise
       return false;
     }
 
-    // TEMPORARY DEBUG — decode the HTLC settlement proof to find the real funder
-    if (transaction.proof) {
-      try {
-        const proofBytes = typeof transaction.proof === "string"
-          ? Uint8Array.from(Buffer.from(transaction.proof, "hex"))
-          : undefined;
-        if (proofBytes) {
-          const decodedProof = HashedTimeLockedContract.proofToPlain(proofBytes);
-          console.log("DEBUG decoded HTLC proof:", JSON.stringify(decodedProof, null, 2));
-        }
-      } catch (err) {
-        console.log("DEBUG proof decode failed (maybe not an HTLC proof):", err);
-      }
-    }
-
     // executionResult lives on the transaction object itself in the Albatross shape.
     if (transaction.executionResult === false) {
       console.error("Tip transaction execution failed", { txHash: input.txHash });
       return false;
     }
 
-    const sender = normalizeWallet(transaction.fromAddress ?? transaction.sender ?? transaction.from);
+    // If this settlement transaction's sender is an HTLC contract (fromType 2),
+    // the *real* payer is the HTLC's creator, decodable from the proof — not
+    // `transaction.from`, which is always the contract address. Nimiq Pay
+    // funds tips via user -> HTLC -> recipient, so decode the proof and use
+    // `creator` as the effective sender whenever this path is taken.
+    let effectiveSender = normalizeWallet(transaction.fromAddress ?? transaction.sender ?? transaction.from);
+    if (transaction.fromType === 2 && typeof transaction.proof === "string") {
+      try {
+        const proofBytes = Uint8Array.from(Buffer.from(transaction.proof, "hex"));
+        const decodedProof = HashedTimeLockedContract.proofToPlain(proofBytes);
+        if ("creator" in decodedProof && typeof decodedProof.creator === "string") {
+          effectiveSender = normalizeWallet(decodedProof.creator);
+        }
+      } catch (err) {
+        console.error("Failed to decode HTLC proof for sender verification", {
+          txHash,
+          err: err instanceof Error ? err.message : err
+        });
+        // Fall through with effectiveSender left as the contract address,
+        // which will correctly fail the sender check below rather than
+        // silently passing verification with unverified sender info.
+      }
+    }
+
     const recipient = normalizeWallet(transaction.toAddress ?? transaction.recipient ?? transaction.to);
     const expectedSender = normalizeWallet(input.fromWallet);
     const expectedRecipient = normalizeWallet(input.toWallet);
 
-    if (sender !== expectedSender || recipient !== expectedRecipient) {
+    if (effectiveSender !== expectedSender || recipient !== expectedRecipient) {
       console.error("Tip transaction address mismatch", {
         expectedSender,
-        sender,
+        sender: effectiveSender,
         expectedRecipient,
         recipient,
         transaction: describeTransaction(transaction)
