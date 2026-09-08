@@ -566,7 +566,12 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     if (tip.rowCount === 0) return reply.notFound("tip not found");
     if (tip.rows[0].from_wallet !== session.wallet && tip.rows[0].to_wallet !== session.wallet) return reply.forbidden();
     if (tip.rows[0].status === "verified") return tip.rows[0];
-    const verified = await verifyTipTransaction(tip.rows[0]);
+    const verified = await verifyTipTransaction({
+      txHash: tip.rows[0].tx_hash,
+      fromWallet: tip.rows[0].from_wallet,
+      toWallet: tip.rows[0].to_wallet,
+      amountNim: tip.rows[0].amount
+    });
     if (!verified) return reply.code(202).send({ ...tip.rows[0], message: "Tip is not visible as a matching on-chain transaction yet" });
     const result = await pool.query(`update tips set status = 'verified', verified_at = now() where id = $1 returning id, from_wallet, to_wallet, post_id, amount_nim::text as amount, tx_hash, status, verified_at`, [params.id]);
     return result.rows[0];
