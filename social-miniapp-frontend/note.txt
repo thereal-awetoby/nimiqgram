@@ -12,3 +12,4 @@ taking notes
 making ui great and tipmodal 
 algorithm setting and streamlining
 finishing up and moduling and modeling 
+finishing touches
