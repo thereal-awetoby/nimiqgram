@@ -50,7 +50,9 @@ function nimToLunas(amountNim: string): bigint {
 
 function normalizeWallet(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
-  const normalized = value.trim();
+  // Nimiq RPC returns addresses in spaced human-readable form
+  // (e.g. "NQ12 FBBY GJ2V ..."), so strip all whitespace before comparing.
+  const normalized = value.replace(/\s+/g, "").trim();
   if (!normalized) return undefined;
   return normalized.toLowerCase();
 }
@@ -77,9 +79,9 @@ export async function verifyTipTransaction(input: TipVerificationInput): Promise
       console.error("Tip verification RPC returned no transaction", { txHash, network: config.NIMIQ_NETWORK });
       return false;
     }
-    // TEMPORARY DEBUG — remove once real field names are confirmed
-    console.log("DEBUG raw RPC payload.result:", JSON.stringify(payload.result, null, 2));
-    const nestedTransaction = payload.result.transaction;
+
+    // Albatross RPC nests the transaction under `data`; older shape used `transaction`.
+    const nestedTransaction = payload.result.data ?? payload.result.transaction;
     const transaction = isRecord(nestedTransaction) && Object.keys(nestedTransaction).length > 0
       ? nestedTransaction
       : Object.keys(payload.result).some((key) => ["from", "fromAddress", "sender", "to", "toAddress", "recipient", "value"].includes(key))
@@ -94,7 +96,9 @@ export async function verifyTipTransaction(input: TipVerificationInput): Promise
       });
       return false;
     }
-    if (payload.result.executionResult === false) {
+
+    // executionResult lives on the transaction object itself in the Albatross shape.
+    if (transaction.executionResult === false) {
       console.error("Tip transaction execution failed", { txHash: input.txHash });
       return false;
     }
