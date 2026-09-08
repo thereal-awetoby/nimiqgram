@@ -77,6 +77,8 @@ export async function verifyTipTransaction(input: TipVerificationInput): Promise
       console.error("Tip verification RPC returned no transaction", { txHash, network: config.NIMIQ_NETWORK });
       return false;
     }
+    // TEMPORARY DEBUG — remove once real field names are confirmed
+    console.log("DEBUG raw RPC payload.result:", JSON.stringify(payload.result, null, 2));
     const nestedTransaction = payload.result.transaction;
     const transaction = isRecord(nestedTransaction) && Object.keys(nestedTransaction).length > 0
       ? nestedTransaction
