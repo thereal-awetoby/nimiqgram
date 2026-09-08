@@ -6,6 +6,7 @@ import { uploadMedia, getMediaType } from '../lib/upload'
 import TipModal from '../components/TipModal'
 import Avatar from '../components/Avatar'
 import LoadingHexagon from '../components/LoadingHexagon'
+import CommentThread from '../components/CommentThread'
 import VideoPreview from '../components/VideoPreview'
 import { formatPostDate } from '../lib/date'
 import { usePendingTips } from '../hooks/usePendingTips'
@@ -371,20 +372,24 @@ function Feed() {
     setCommentState((prev) => ({ ...prev, [postId]: { ...prev[postId], draft: value } }))
   }
 
-  async function submitComment(postId) {
-    const draft = commentState[postId]?.draft?.trim()
+  async function submitComment(postId, parentCommentId = null, textOverride = null) {
+    const draft = (textOverride ?? commentState[postId]?.draft)?.trim()
     if (!draft) return
-    setCommentState((prev) => ({ ...prev, [postId]: { ...prev[postId], submitting: true } }))
+    if (!parentCommentId) {
+      setCommentState((prev) => ({ ...prev, [postId]: { ...prev[postId], submitting: true } }))
+    }
     try {
-      const newComment = await addComment(token, postId, draft)
+      const newComment = await addComment(token, postId, draft, parentCommentId)
       setCommentState((prev) => ({
         ...prev,
-        [postId]: { ...prev[postId], comments: [...(prev[postId]?.comments || []), newComment], draft: '', submitting: false },
+        [postId]: { ...prev[postId], comments: [...(prev[postId]?.comments || []), newComment], draft: parentCommentId ? prev[postId]?.draft : '', submitting: false },
       }))
       setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, commentCount: (p.commentCount || 0) + 1 } : p)))
     } catch (err) {
       console.error(err)
-      setCommentState((prev) => ({ ...prev, [postId]: { ...prev[postId], submitting: false } }))
+      if (!parentCommentId) {
+        setCommentState((prev) => ({ ...prev, [postId]: { ...prev[postId], submitting: false } }))
+      }
     }
   }
 
@@ -583,11 +588,12 @@ function Feed() {
                       ) : cState.comments.length === 0 ? (
                         <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>No comments yet.</p>
                       ) : (
-                        cState.comments.map((c, i) => (
-                          <div key={c.id || i} style={{ marginBottom: 8, fontSize: 13.5 }}>
-                            <strong>{c.author?.username || c.author?.wallet || 'unknown'}</strong>: {c.text}
-                          </div>
-                        ))
+                        <CommentThread
+                          comments={cState.comments}
+                          isLoggedIn={isLoggedIn}
+                          compact
+                          onReply={(commentId, text) => submitComment(post.id, commentId, text)}
+                        />
                       )}
                       {isLoggedIn && (
                         <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>

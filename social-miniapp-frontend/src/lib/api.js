@@ -109,10 +109,10 @@ export function recordPostView(token, postId) {
   })
 }
 
-export function addComment(token, postId, text) {
+export function addComment(token, postId, text, parentCommentId = null) {
   return authedRequest(`/posts/${postId}/comment`, token, {
     method: 'POST',
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text, parentCommentId }),
   })
 }
 

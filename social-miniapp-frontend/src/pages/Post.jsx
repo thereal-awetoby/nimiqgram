@@ -4,6 +4,7 @@ import { addComment, getPost, getBookmarkStatus, bookmarkPost, removeBookmark, t
 import { useAuth } from '../context/AuthContext'
 import Avatar from '../components/Avatar'
 import LoadingHexagon from '../components/LoadingHexagon'
+import CommentThread from '../components/CommentThread'
 import TipModal from '../components/TipModal'
 import { formatPostDate } from '../lib/date'
 import VideoPreview from '../components/VideoPreview'
@@ -166,16 +167,16 @@ function Post() {
     }
   }
 
-  async function submitComment(event) {
-    event.preventDefault()
-    const text = draft.trim()
+  async function submitComment(event, parentCommentId = null, textOverride = null) {
+    event?.preventDefault()
+    const text = (textOverride ?? draft).trim()
     if (!text || !isLoggedIn) return
     setSubmitting(true)
     setError(null)
     try {
-      const comment = await addComment(token, postId, text)
+      const comment = await addComment(token, postId, text, parentCommentId)
       setPost((current) => ({ ...current, comments: [...(current.comments || []), comment], commentCount: (current.commentCount || 0) + 1 }))
-      setDraft('')
+      if (!parentCommentId) setDraft('')
     } catch (err) {
       setError(err.message)
     } finally {
@@ -255,15 +256,11 @@ function Post() {
           <p style={{ color: 'var(--text-muted)' }}>No comments yet.</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {post.comments.map((comment, index) => (
-              <div key={comment.id || index} style={{ paddingBottom: 12, borderBottom: '1px solid var(--nav-border)' }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
-                  <strong style={{ fontSize: 13 }}>{comment.author?.username || comment.authorWallet || 'User'}</strong>
-                  {formatPostDate(comment.createdAt) && <time dateTime={comment.createdAt} style={{ color: 'var(--text-muted)', fontSize: 11 }}>{formatPostDate(comment.createdAt)}</time>}
-                </div>
-                <div style={{ marginTop: 4, lineHeight: 1.4 }}>{comment.text}</div>
-              </div>
-            ))}
+            <CommentThread
+              comments={post.comments}
+              isLoggedIn={isLoggedIn}
+              onReply={(commentId, text) => submitComment(null, commentId, text)}
+            />
           </div>
         )}
       </section>
