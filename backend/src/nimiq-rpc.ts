@@ -55,6 +55,10 @@ function normalizeWallet(value: unknown): string | undefined {
   return normalized.toLowerCase();
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 export async function verifyTipTransaction(input: TipVerificationInput): Promise<boolean> {
   if (!config.NIMIQ_RPC_URL) return false;
   const txHash = input.txHash.trim().replace(/^0x/i, "").toLowerCase();
@@ -73,7 +77,21 @@ export async function verifyTipTransaction(input: TipVerificationInput): Promise
       console.error("Tip verification RPC returned no transaction", { txHash, network: config.NIMIQ_NETWORK });
       return false;
     }
-    const transaction = (payload.result.transaction as Record<string, unknown> | undefined) ?? payload.result;
+    const nestedTransaction = payload.result.transaction;
+    const transaction = isRecord(nestedTransaction) && Object.keys(nestedTransaction).length > 0
+      ? nestedTransaction
+      : Object.keys(payload.result).some((key) => ["from", "fromAddress", "sender", "to", "toAddress", "recipient", "value"].includes(key))
+        ? payload.result
+        : undefined;
+    if (!transaction) {
+      console.error("Tip verification RPC returned an empty transaction result", {
+        txHash,
+        network: config.NIMIQ_NETWORK,
+        resultKeys: Object.keys(payload.result),
+        nestedTransactionType: typeof nestedTransaction
+      });
+      return false;
+    }
     if (payload.result.executionResult === false) {
       console.error("Tip transaction execution failed", { txHash: input.txHash });
       return false;
