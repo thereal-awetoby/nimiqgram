@@ -8,6 +8,7 @@ import Avatar from '../components/Avatar'
 import LoadingHexagon from '../components/LoadingHexagon'
 import VideoPreview from '../components/VideoPreview'
 import { formatPostDate } from '../lib/date'
+import { usePendingTips } from '../hooks/usePendingTips'
 
 const MAX_VIDEO_SECONDS = 5 * 60
 const URL_REGEX = /(https?:\/\/[^\s]+)/g
@@ -187,6 +188,7 @@ function Feed() {
   const [error, setError] = useState(null)
   const [commentState, setCommentState] = useState({})
   const [tippingPost, setTippingPost] = useState(null)
+  const [activeTipId, setActiveTipId] = useState(null)
   const [followingUsers, setFollowingUsers] = useState([])
   const [feedScope, setFeedScope] = useState('all')
 
@@ -197,6 +199,21 @@ function Feed() {
   const fileInputRef = useRef(null)
   const [myAvatar, setMyAvatar] = useState(null)
   const viewedPostsRef = useRef(new Set())
+
+  // Applies a verified tip's amount to the matching post's tipTotal. Used by
+  // usePendingTips, which keeps polling even after TipModal is closed or the
+  // user navigates within this page, so a tip that verifies after the modal
+  // is dismissed still updates the icon.
+  const handleTipVerified = useCallback((tip) => {
+    if (!tip?.postId) return
+    setPosts((prev) => prev.map((post) =>
+      post.id === tip.postId
+        ? { ...post, tipTotal: (Number(post.tipTotal || 0) + Number(tip.amount || 0)).toString() }
+        : post
+    ))
+  }, [])
+
+  const { trackTip, statusById } = usePendingTips(token, handleTipVerified)
 
   const loadFeed = useCallback(async () => {
     setLoading(true)
@@ -602,11 +619,17 @@ function Feed() {
       {tippingPost && (
         <TipModal
           post={tippingPost}
-          onClose={() => setTippingPost(null)}
+          onClose={() => { setTippingPost(null); setActiveTipId(null) }}
+          onPending={(result) => {
+            trackTip(result?.id, { postId: tippingPost.id, amount: Number(result?.amount) })
+            setActiveTipId(result?.id)
+          }}
+          verificationStatus={activeTipId ? statusById[activeTipId] : undefined}
           onSuccess={(result) => {
             if (result?.status === 'verified') {
               setPosts((prev) => prev.map((post) => post.id === tippingPost.id ? { ...post, tipTotal: (Number(post.tipTotal || 0) + Number(result.amount || 0)).toString() } : post))
               setTippingPost(null)
+              setActiveTipId(null)
             }
           }}
         />

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { addComment, getPost, getBookmarkStatus, bookmarkPost, removeBookmark, toggleLike, recordPostView } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
@@ -7,6 +7,7 @@ import LoadingHexagon from '../components/LoadingHexagon'
 import TipModal from '../components/TipModal'
 import { formatPostDate } from '../lib/date'
 import VideoPreview from '../components/VideoPreview'
+import { usePendingTips } from '../hooks/usePendingTips'
 
 function HeartIcon({ filled }) {
   return (
@@ -91,6 +92,19 @@ function Post() {
   const [bookmarked, setBookmarked] = useState(false)
   const [liked, setLiked] = useState(false)
   const [tippingPost, setTippingPost] = useState(null)
+  const [activeTipId, setActiveTipId] = useState(null)
+
+  // Applies a verified tip's amount to the current post's tipTotal. Used by
+  // usePendingTips, which keeps polling even after TipModal is closed, so a
+  // tip that verifies after the user dismisses the modal still updates the
+  // icon on this page.
+  const handleTipVerified = useCallback((tip) => {
+    setPost((current) => (current && tip?.postId === current.id)
+      ? { ...current, tipTotal: Number(current.tipTotal || 0) + Number(tip.amount || 0) }
+      : current)
+  }, [])
+
+  const { trackTip, statusById } = usePendingTips(token, handleTipVerified)
 
   useEffect(() => {
     let cancelled = false
@@ -257,11 +271,17 @@ function Post() {
       {tippingPost && (
         <TipModal
           post={tippingPost}
-          onClose={() => setTippingPost(null)}
+          onClose={() => { setTippingPost(null); setActiveTipId(null) }}
+          onPending={(result) => {
+            trackTip(result?.id, { postId: tippingPost.id, amount: Number(result?.amount) })
+            setActiveTipId(result?.id)
+          }}
+          verificationStatus={activeTipId ? statusById[activeTipId] : undefined}
           onSuccess={(result) => {
             if (result?.status === 'verified' && post && post.id === tippingPost.id) {
               setPost((current) => ({ ...current, tipTotal: Number(current.tipTotal || 0) + Number(result.amount || 0) }))
               setTippingPost(null)
+              setActiveTipId(null)
             }
           }}
         />
