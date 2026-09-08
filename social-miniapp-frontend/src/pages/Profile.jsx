@@ -42,6 +42,10 @@ function EyeIcon() {
   )
 }
 
+function wait(milliseconds) {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds))
+}
+
 function Profile() {
   const { user, token, isLoggedIn } = useAuth()
   const { wallet: profileWallet } = useParams()
@@ -125,9 +129,14 @@ function Profile() {
     ])
       .then(async ([posts, likes, tips, bookmarks]) => {
         const pendingTips = isOwnProfile && isLoggedIn
-          ? (tips.tips || []).filter((tip) => tip.status === 'pending')
+          ? (tips.tips || []).filter((tip) => tip.status === 'pending').slice(0, 3)
           : []
-        const verifiedTips = await Promise.all(pendingTips.map((tip) => verifyTip(token, tip.id).catch(() => null)))
+        const verifiedTips = []
+        for (const tip of pendingTips) {
+          const verifiedTip = await verifyTip(token, tip.id).catch(() => null)
+          verifiedTips.push(verifiedTip)
+          await wait(1500)
+        }
         const verifiedById = new Map(verifiedTips.filter(Boolean).map((tip) => [tip.id, tip]))
         const refreshedTips = (tips.tips || []).map((tip) => ({ ...tip, status: verifiedById.get(tip.id)?.status || tip.status }))
         const postsWereUpdated = verifiedTips.some((tip) => tip?.status === 'verified')
