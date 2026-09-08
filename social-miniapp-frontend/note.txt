@@ -13,3 +13,4 @@ making ui great and tipmodal
 algorithm setting and streamlining
 finishing up and moduling and modeling 
 finishing touches on some areas and update
+many fixes and more
