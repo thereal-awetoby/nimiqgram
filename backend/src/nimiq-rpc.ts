@@ -12,6 +12,20 @@ type RpcResponse = {
   error?: { message?: string };
 };
 
+function describeTransaction(transaction: Record<string, unknown>): string {
+  return JSON.stringify({
+    hash: transaction.hash,
+    from: transaction.from,
+    sender: transaction.sender,
+    to: transaction.to,
+    recipient: transaction.recipient,
+    value: transaction.value,
+    confirmations: transaction.confirmations,
+    networkId: transaction.networkId,
+    blockNumber: transaction.blockNumber
+  });
+}
+
 function nimToLunas(amountNim: string): bigint {
   const [whole, fraction = ""] = amountNim.trim().split(".");
   const normalizedFraction = fraction.padEnd(5, "0").slice(0, 5);
@@ -35,19 +49,41 @@ export async function verifyTipTransaction(input: TipVerificationInput): Promise
       body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method: "getTransactionByHash", params: [input.txHash] })
     });
 
-    if (!response.ok) return false;
+    if (!response.ok) {
+      console.error(`Tip verification RPC returned HTTP ${response.status}`);
+      return false;
+    }
 
     const payload = await response.json() as RpcResponse;
-    if (!payload.result || payload.error) return false;
+    if (payload.error) {
+      console.error("Tip verification RPC error:", payload.error.message ?? "unknown RPC error");
+      return false;
+    }
+    if (!payload.result) {
+      console.error("Tip verification RPC returned no transaction", { txHash: input.txHash, network: config.NIMIQ_NETWORK });
+      return false;
+    }
     const transaction = (payload.result.transaction as Record<string, unknown> | undefined) ?? payload.result;
-    if (payload.result.executionResult === false) return false;
+    if (payload.result.executionResult === false) {
+      console.error("Tip transaction execution failed", { txHash: input.txHash });
+      return false;
+    }
 
     const sender = normalizeWallet(transaction.sender ?? transaction.from);
     const recipient = normalizeWallet(transaction.recipient ?? transaction.to);
     const expectedSender = normalizeWallet(input.fromWallet);
     const expectedRecipient = normalizeWallet(input.toWallet);
 
-    if (sender !== expectedSender || recipient !== expectedRecipient) return false;
+    if (sender !== expectedSender || recipient !== expectedRecipient) {
+      console.error("Tip transaction address mismatch", {
+        expectedSender,
+        sender,
+        expectedRecipient,
+        recipient,
+        transaction: describeTransaction(transaction)
+      });
+      return false;
+    }
 
     const rawValue = transaction.value ?? transaction.amount;
     let txValue: bigint | undefined;
@@ -57,7 +93,22 @@ export async function verifyTipTransaction(input: TipVerificationInput): Promise
       txValue = BigInt(Math.trunc(rawValue));
     }
 
-    return txValue === nimToLunas(input.amountNim);
+    const expectedValue = nimToLunas(input.amountNim);
+    if (txValue !== expectedValue) {
+      console.error("Tip transaction amount mismatch", {
+        expectedValue: expectedValue.toString(),
+        actualValue: txValue?.toString(),
+        transaction: describeTransaction(transaction)
+      });
+      return false;
+    }
+
+    console.log("Tip transaction verified on-chain", {
+      txHash: input.txHash,
+      network: config.NIMIQ_NETWORK,
+      transaction: describeTransaction(transaction)
+    });
+    return true;
   } catch (err) {
     console.error("Tip verification failed (treating as unverified/pending):", err);
     return false;
