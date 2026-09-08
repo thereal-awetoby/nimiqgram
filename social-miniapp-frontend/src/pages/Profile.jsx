@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getProfile, updateProfile, getStreaks, getFollowing, getFollowers, getFollowStatus, followUser, unfollowUser, getProfilePosts, getProfileLikes, getTipActivity, getBookmarks } from '../lib/api'
+import { getProfile, updateProfile, getStreaks, getFollowing, getFollowers, getFollowStatus, followUser, unfollowUser, getProfilePosts, getProfileLikes, getTipActivity, verifyTip, getBookmarks } from '../lib/api'
 import { uploadMedia } from '../lib/upload'
 import Avatar from '../components/Avatar'
 import LoadingHexagon from '../components/LoadingHexagon'
@@ -123,7 +123,17 @@ function Profile() {
       getTipActivity(targetWallet),
       isOwnProfile && isLoggedIn ? getBookmarks(targetWallet, token) : Promise.resolve({ posts: [] })
     ])
-      .then(([posts, likes, tips, bookmarks]) => setTabData({ posts: posts.posts || [], likes: likes.posts || [], tips: tips.tips || [], bookmarks: bookmarks.posts || [] }))
+      .then(async ([posts, likes, tips, bookmarks]) => {
+        const pendingTips = isOwnProfile && isLoggedIn
+          ? (tips.tips || []).filter((tip) => tip.status === 'pending')
+          : []
+        const verifiedTips = await Promise.all(pendingTips.map((tip) => verifyTip(token, tip.id).catch(() => null)))
+        const verifiedById = new Map(verifiedTips.filter(Boolean).map((tip) => [tip.id, tip]))
+        const refreshedTips = (tips.tips || []).map((tip) => ({ ...tip, status: verifiedById.get(tip.id)?.status || tip.status }))
+        const postsWereUpdated = verifiedTips.some((tip) => tip?.status === 'verified')
+        const refreshedPosts = postsWereUpdated ? await getProfilePosts(targetWallet) : posts
+        setTabData({ posts: refreshedPosts.posts || [], likes: likes.posts || [], tips: refreshedTips, bookmarks: bookmarks.posts || [] })
+      })
       .catch((err) => setError(err.message))
       .finally(() => setTabLoading(false))
   }, [targetWallet, isOwnProfile, isLoggedIn, token])
