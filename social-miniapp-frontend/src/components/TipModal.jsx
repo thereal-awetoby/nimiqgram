@@ -46,16 +46,18 @@ function getTransactionHash(serializedTransaction) {
     if (!normalized) throw new Error('The wallet returned an empty transaction payload.')
     if (normalized.length === 64 && /^[0-9a-f]+$/.test(normalized)) return normalized
 
+    try {
+      return requireTransactionHash(Transaction.fromAny(normalized).hash())
+    } catch {
+      // Fall back to explicitly deserializing the wallet's hex payload below.
+    }
+
     const bytes = decodeHexString(normalized)
     if (bytes) {
       try {
         return requireTransactionHash(Transaction.deserialize(bytes).hash())
       } catch {
-        try {
-          return requireTransactionHash(Transaction.fromAny(normalized).hash())
-        } catch {
-          throw new Error('The wallet returned a malformed transaction payload.')
-        }
+        throw new Error('The wallet returned a malformed transaction payload.')
       }
     }
   }
@@ -118,7 +120,7 @@ function TipModal({ post, onClose, onSuccess }) {
 
       await initCore()
       const txHash = getTransactionHash(serializedTransaction)
-
+      throw new Error(`DEBUG txHash="${txHash}" length=${txHash.length}`)
       const result = await sendTip(token, {
         toWallet: post.author?.wallet,
         postId: post.id,
