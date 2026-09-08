@@ -36,6 +36,8 @@ export function AuthProvider({ children }) {
   )
 }
 
+// Auth hook is exported with the provider for the existing import surface.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   return useContext(AuthContext)
 }

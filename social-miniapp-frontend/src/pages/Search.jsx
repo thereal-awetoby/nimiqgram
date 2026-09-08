@@ -14,8 +14,10 @@ function Search() {
   useEffect(() => {
     const term = query.trim()
     if (!term) {
-      setResults({ people: [], posts: [] })
-      setLoading(false)
+      Promise.resolve().then(() => {
+        setResults({ people: [], posts: [] })
+        setLoading(false)
+      })
       return undefined
     }
 

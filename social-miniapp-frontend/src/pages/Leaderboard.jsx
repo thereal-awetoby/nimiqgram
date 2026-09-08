@@ -85,12 +85,16 @@ function Leaderboard() {
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
-    setError(null)
 
-    getLeaderboard(range)
+    Promise.resolve()
+      .then(() => {
+        if (cancelled) return null
+        setLoading(true)
+        setError(null)
+        return getLeaderboard(range)
+      })
       .then((data) => {
-        if (cancelled) return
+        if (cancelled || !data) return
         setTopTippers(data.topTippers || [])
         setTopEarners(data.topEarners || [])
         setTopStreakers(data.topStreakers || [])

@@ -94,10 +94,14 @@ function Post() {
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
-    getPost(postId)
+    Promise.resolve()
+      .then(() => {
+        if (cancelled) return null
+        setLoading(true)
+        return getPost(postId)
+      })
       .then((data) => {
-        if (!cancelled) {
+        if (!cancelled && data) {
           setPost(data)
           setLiked(Boolean(data.likedByMe))
         }

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 
 const HEX_COLOR = '#f2b705'
 const SHADOW_LIGHT = '#b9b3a1'

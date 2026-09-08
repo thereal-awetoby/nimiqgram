@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import initCore, { Transaction } from '@nimiq/core/web'
 import { useAuth } from '../context/AuthContext'
-import { sendTip } from '../lib/api'
+import { sendTip, verifyTip } from '../lib/api'
 
 function normalizeHexString(value) {
   if (typeof value !== 'string') return ''
@@ -61,7 +61,41 @@ function TipModal({ post, onClose, onSuccess }) {
   const { token } = useAuth()
   const [amount, setAmount] = useState('1')
   const [status, setStatus] = useState('idle') // idle | sending | pending | success | error
+  const [pendingTipId, setPendingTipId] = useState(null)
   const [error, setError] = useState(null)
+
+  useEffect(() => {
+    if (status !== 'pending' || !pendingTipId) return undefined
+
+    let cancelled = false
+    let attempts = 0
+    let timer
+
+    async function retryVerification() {
+      attempts += 1
+      try {
+        const result = await verifyTip(token, pendingTipId)
+        if (cancelled) return
+        if (result?.status === 'verified') {
+          setStatus('success')
+          onSuccess?.(result)
+          return
+        }
+      } catch (err) {
+        console.error(err)
+      }
+
+      if (!cancelled && attempts < 10) {
+        timer = window.setTimeout(retryVerification, 3000)
+      }
+    }
+
+    timer = window.setTimeout(retryVerification, 3000)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [onSuccess, pendingTipId, status, token])
 
   async function handleSendTip() {
     setStatus('sending')
@@ -89,6 +123,7 @@ function TipModal({ post, onClose, onSuccess }) {
       if (result?.status === 'verified') {
         setStatus('success')
       } else {
+        setPendingTipId(result?.id)
         setStatus('pending')
       }
       onSuccess?.(result)

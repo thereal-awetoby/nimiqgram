@@ -10,24 +10,26 @@ function Notifications() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  async function load() {
-    if (!isLoggedIn) {
-      setLoading(false)
-      return
+  useEffect(() => {
+    async function load() {
+      if (!isLoggedIn) {
+        setLoading(false)
+        return
+      }
+      setLoading(true)
+      try {
+        const data = await getNotifications(token)
+        setNotifications(data.notifications || [])
+      } catch (err) {
+        console.error(err)
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
     }
-    setLoading(true)
-    try {
-      const data = await getNotifications(token)
-      setNotifications(data.notifications || [])
-    } catch (err) {
-      console.error(err)
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
 
-  useEffect(() => { load() }, [isLoggedIn])
+    Promise.resolve().then(load)
+  }, [isLoggedIn, token])
 
   async function handleMarkAllRead() {
     try {

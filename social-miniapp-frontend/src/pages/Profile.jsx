@@ -82,7 +82,7 @@ function Profile() {
   useEffect(() => {
     if (!targetWallet) return
 
-    setProfileLoading(true)
+    Promise.resolve().then(() => setProfileLoading(true))
     getProfile(targetWallet)
       .then((profile) => {
         setDisplayName(profile.displayName || profile.username || '')
@@ -95,13 +95,13 @@ function Profile() {
       .catch((err) => console.error(err))
       .finally(() => setProfileLoading(false))
 
-    setStreakLoading(true)
+    Promise.resolve().then(() => setStreakLoading(true))
     getStreaks(targetWallet)
       .then((data) => setStreakData(data))
       .catch((err) => console.error(err))
       .finally(() => setStreakLoading(false))
 
-    setFollowingLoading(true)
+    Promise.resolve().then(() => setFollowingLoading(true))
     Promise.all([getFollowing(targetWallet), getFollowers(targetWallet)])
       .then(([followingData, followersData]) => {
         setFollowing(followingData.users || [])
@@ -116,7 +116,7 @@ function Profile() {
         .catch((err) => console.error(err))
     }
 
-    setTabLoading(true)
+    Promise.resolve().then(() => setTabLoading(true))
     Promise.all([
       getProfilePosts(targetWallet),
       getProfileLikes(targetWallet),
@@ -452,6 +452,7 @@ function Profile() {
                       <strong>{counterparty}</strong>
                       <span style={{ color: 'var(--accent-color)', marginLeft: 8 }}>{tip.amount} NIM</span>
                       <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>{tip.status === 'pending' ? 'Awaiting blockchain verification' : tip.status}</div>
+                      {formatPostDate(tip.created_at) && <time dateTime={tip.created_at} style={{ color: 'var(--text-muted)', fontSize: 11 }}>{formatPostDate(tip.created_at)}</time>}
                     </div>
                   )
                 })}

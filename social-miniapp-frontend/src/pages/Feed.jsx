@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getFeed, createPost, toggleLike, addComment, getPost, getProfile, recordPostView, getFollowing } from '../lib/api'
@@ -198,7 +198,7 @@ function Feed() {
   const [myAvatar, setMyAvatar] = useState(null)
   const viewedPostsRef = useRef(new Set())
 
-  async function loadFeed() {
+  const loadFeed = useCallback(async () => {
     setLoading(true)
     try {
       const data = await getFeed(undefined, token || undefined, feedScope)
@@ -211,11 +211,11 @@ function Feed() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [feedScope, token])
 
   useEffect(() => {
     if (!user?.wallet) {
-      setFeedScope('all')
+      Promise.resolve().then(() => setFeedScope('all'))
       return
     }
 
@@ -224,19 +224,19 @@ function Feed() {
       .catch(() => setFollowingUsers([]))
 
     if (!token) {
-      setFeedScope('all')
+      Promise.resolve().then(() => setFeedScope('all'))
       return
     }
 
-    setFeedScope((prev) => (prev === 'following' || prev === 'all' ? prev : 'all'))
+    Promise.resolve().then(() => setFeedScope((prev) => (prev === 'following' || prev === 'all' ? prev : 'all')))
   }, [user, token])
 
   useEffect(() => {
     if (!token && !user) {
-      setFeedScope('all')
+      Promise.resolve().then(() => setFeedScope('all'))
     }
-    loadFeed()
-  }, [feedScope, token])
+    Promise.resolve().then(() => loadFeed())
+  }, [loadFeed, token, user])
 
   useEffect(() => {
     if (!isLoggedIn || !posts.length || !token) return

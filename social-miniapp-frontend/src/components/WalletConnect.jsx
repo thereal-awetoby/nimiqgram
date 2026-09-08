@@ -4,11 +4,6 @@ import { useAuth } from '../context/AuthContext'
 import { getChallenge, verifyAuth, getProfile } from '../lib/api'
 import Avatar from './Avatar'
 
-function truncateWallet(wallet) {
-  if (!wallet) return ''
-  return wallet.length > 20 ? `${wallet.slice(0, 10)}…${wallet.slice(-6)}` : wallet
-}
-
 function WalletConnect() {
   const { user, login, logout, isLoggedIn } = useAuth()
   const navigate = useNavigate()
@@ -20,7 +15,7 @@ function WalletConnect() {
 
   useEffect(() => {
     if (!user?.wallet) {
-      setMyAvatar(null)
+      Promise.resolve().then(() => setMyAvatar(null))
       return
     }
     getProfile(user.wallet)
