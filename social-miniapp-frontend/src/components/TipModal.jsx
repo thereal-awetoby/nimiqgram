@@ -5,7 +5,13 @@ import { sendTip, verifyTip } from '../lib/api'
 
 function normalizeHexString(value) {
   if (typeof value !== 'string') return ''
-  return value.trim().replace(/^0x/i, '').replace(/\s+/g, '')
+  return value.trim().replace(/^0x/i, '').replace(/\s+/g, '').toLowerCase()
+}
+
+function requireTransactionHash(value) {
+  const hash = normalizeHexString(value)
+  if (!/^[0-9a-f]{64}$/.test(hash)) throw new Error('The wallet returned an invalid transaction hash.')
+  return hash
 }
 
 function decodeHexString(hex) {
@@ -32,21 +38,21 @@ function getTransactionHash(serializedTransaction) {
     const directHash = serializedTransaction.hash
       ?? serializedTransaction.txHash
       ?? serializedTransaction.transactionHash
-    if (typeof directHash === 'string' && directHash.trim()) return normalizeHexString(directHash)
+    if (typeof directHash === 'string' && directHash.trim()) return requireTransactionHash(directHash)
   }
 
   if (typeof serializedTransaction === 'string') {
     const normalized = normalizeHexString(serializedTransaction)
     if (!normalized) throw new Error('The wallet returned an empty transaction payload.')
-    if (normalized.length === 64 && /^[0-9a-fA-F]+$/.test(normalized)) return normalized
+    if (normalized.length === 64 && /^[0-9a-f]+$/.test(normalized)) return normalized
 
     const bytes = decodeHexString(normalized)
     if (bytes) {
       try {
-        return Transaction.deserialize(bytes).hash()
+        return requireTransactionHash(Transaction.deserialize(bytes).hash())
       } catch {
         try {
-          return Transaction.fromAny(normalized).hash()
+          return requireTransactionHash(Transaction.fromAny(normalized).hash())
         } catch {
           throw new Error('The wallet returned a malformed transaction payload.')
         }

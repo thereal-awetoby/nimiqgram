@@ -13,33 +13,27 @@ type RpcResponse = {
 };
 
 async function getTransactionByHash(txHash: string): Promise<RpcResponse> {
-  const request = async (params: unknown): Promise<RpcResponse> => {
-    const response = await fetch(config.NIMIQ_RPC_URL!, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method: "getTransactionByHash", params })
-    });
+  const response = await fetch(config.NIMIQ_RPC_URL!, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method: "getTransactionByHash", params: [txHash] })
+  });
 
-    if (!response.ok) {
-      throw new Error(`RPC HTTP ${response.status}`);
-    }
+  if (!response.ok) {
+    throw new Error(`RPC HTTP ${response.status}`);
+  }
 
-    return await response.json() as RpcResponse;
-  };
-
-  const arrayResponse = await request([txHash]);
-  if (arrayResponse.error?.message !== "Invalid params") return arrayResponse;
-
-  console.warn("Nimiq RPC rejected array parameters; retrying object parameters");
-  return request({ hash: txHash });
+  return await response.json() as RpcResponse;
 }
 
 function describeTransaction(transaction: Record<string, unknown>): string {
   return JSON.stringify({
     hash: transaction.hash,
     from: transaction.from,
+    fromAddress: transaction.fromAddress,
     sender: transaction.sender,
     to: transaction.to,
+    toAddress: transaction.toAddress,
     recipient: transaction.recipient,
     value: transaction.value,
     confirmations: transaction.confirmations,
@@ -63,15 +57,20 @@ function normalizeWallet(value: unknown): string | undefined {
 
 export async function verifyTipTransaction(input: TipVerificationInput): Promise<boolean> {
   if (!config.NIMIQ_RPC_URL) return false;
+  const txHash = input.txHash.trim().replace(/^0x/i, "").toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(txHash)) {
+    console.error("Tip verification received an invalid transaction hash", { txHash: input.txHash });
+    return false;
+  }
 
   try {
-    const payload = await getTransactionByHash(input.txHash);
+    const payload = await getTransactionByHash(txHash);
     if (payload.error) {
       console.error("Tip verification RPC error:", payload.error.message ?? "unknown RPC error");
       return false;
     }
     if (!payload.result) {
-      console.error("Tip verification RPC returned no transaction", { txHash: input.txHash, network: config.NIMIQ_NETWORK });
+      console.error("Tip verification RPC returned no transaction", { txHash, network: config.NIMIQ_NETWORK });
       return false;
     }
     const transaction = (payload.result.transaction as Record<string, unknown> | undefined) ?? payload.result;
@@ -80,8 +79,8 @@ export async function verifyTipTransaction(input: TipVerificationInput): Promise
       return false;
     }
 
-    const sender = normalizeWallet(transaction.sender ?? transaction.from);
-    const recipient = normalizeWallet(transaction.recipient ?? transaction.to);
+    const sender = normalizeWallet(transaction.fromAddress ?? transaction.sender ?? transaction.from);
+    const recipient = normalizeWallet(transaction.toAddress ?? transaction.recipient ?? transaction.to);
     const expectedSender = normalizeWallet(input.fromWallet);
     const expectedRecipient = normalizeWallet(input.toWallet);
 
