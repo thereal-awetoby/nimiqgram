@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import initCore, { Transaction } from '@nimiq/core/web'
 import { useAuth } from '../context/AuthContext'
 import { sendTip } from '../lib/api'
+import { sendWalletTransaction } from '../lib/walletTransaction'
 
 function normalizeHexString(value) {
   if (typeof value !== 'string') return ''
@@ -116,7 +117,7 @@ function TipModal({ post, onClose, onSuccess, onPending, verificationStatus }) {
     try {
       const { init } = await import('@nimiq/mini-app-sdk')
       const nimiq = await init()
-      const serializedTransaction = await nimiq.sendBasicTransaction({
+      const serializedTransaction = await sendWalletTransaction(nimiq, {
         recipient: post.author?.wallet,
         value: Math.round(Number(amount) * 100000),
       })

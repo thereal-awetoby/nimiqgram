@@ -35,6 +35,11 @@ export function usePendingTips(token, wallet, onVerified) {
         stopTracking(tipId)
         return
       }
+      if (result?.status === 'invalid') {
+        setStatusById((prev) => ({ ...prev, [tipId]: 'invalid' }))
+        stopTracking(tipId)
+        return
+      }
     } catch (err) {
       console.error('Tip verification poll failed', err)
     }

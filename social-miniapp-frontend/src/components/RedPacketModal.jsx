@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Transaction } from '@nimiq/core/web'
 import { useAuth } from '../context/AuthContext'
 import { createRedPacket, fundRedPacket } from '../lib/api'
+import { sendWalletTransaction } from '../lib/walletTransaction'
 
 function getTransactionHash(serializedTransaction) {
   if (typeof serializedTransaction !== 'string') throw new Error('The wallet did not return a transaction.')
@@ -27,7 +28,7 @@ function RedPacketModal({ onClose, onCreated }) {
       const { init } = await import('@nimiq/mini-app-sdk')
       const nimiq = await init()
       setStatus('funding')
-      const transaction = await nimiq.sendBasicTransaction({
+      const transaction = await sendWalletTransaction(nimiq, {
         recipient: packet.escrowAddress,
         value: Math.round(Number(amount) * 100000),
       })

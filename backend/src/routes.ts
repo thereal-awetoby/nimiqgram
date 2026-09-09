@@ -759,6 +759,9 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     if (tip.rowCount === 0) return reply.notFound("tip not found");
     if (tip.rows[0].from_wallet !== session.wallet && tip.rows[0].to_wallet !== session.wallet) return reply.forbidden();
     if (tip.rows[0].status === "verified") return tip.rows[0];
+    if (!/^[0-9a-f]{64}$/.test(tip.rows[0].tx_hash.trim().replace(/^0x/i, "").toLowerCase())) {
+      return reply.send({ ...tip.rows[0], status: "invalid", message: "tip has an invalid transaction hash" });
+    }
     const verified = await verifyTipTransaction({
       txHash: tip.rows[0].tx_hash,
       fromWallet: tip.rows[0].from_wallet,
