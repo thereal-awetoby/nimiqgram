@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { verifyTip } from '../lib/api'
+import { getTipActivity, verifyTip } from '../lib/api'
 
 const POLL_INTERVAL_MS = 3000
 const MAX_ATTEMPTS = 10
@@ -8,7 +8,7 @@ const MAX_ATTEMPTS = 10
 // TipModal is expected to be closed by the user while a tip is still
 // verifying — polling must survive that, so it lives here instead, owned
 // by a long-lived parent (Feed/Post) that stays mounted.
-export function usePendingTips(token, onVerified) {
+export function usePendingTips(token, wallet, onVerified) {
   const [statusById, setStatusById] = useState({})
   const metaByIdRef = useRef(new Map())
   const attemptsByIdRef = useRef(new Map())
@@ -59,6 +59,22 @@ export function usePendingTips(token, onVerified) {
     const timer = window.setTimeout(() => poll(tipId), POLL_INTERVAL_MS)
     timersByIdRef.current.set(tipId, timer)
   }, [poll])
+
+  useEffect(() => {
+    if (!token || !wallet) return undefined
+
+    let cancelled = false
+    getTipActivity(wallet)
+      .then((data) => {
+        if (cancelled) return
+        ;(data.tips || [])
+          .filter((tip) => tip.status === 'pending')
+          .forEach((tip) => trackTip(tip.id, { postId: tip.post_id, amount: Number(tip.amount) }))
+      })
+      .catch((err) => console.error('Pending tip recovery failed', err))
+
+    return () => { cancelled = true }
+  }, [token, wallet, trackTip])
 
   useEffect(() => {
     return () => {

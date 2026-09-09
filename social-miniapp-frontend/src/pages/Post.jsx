@@ -84,7 +84,7 @@ function ActionButton({ onClick, disabled, active, children, color = 'var(--text
 
 function Post() {
   const { postId } = useParams()
-  const { token, isLoggedIn } = useAuth()
+  const { token, isLoggedIn, user } = useAuth()
   const [post, setPost] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -105,7 +105,7 @@ function Post() {
       : current)
   }, [])
 
-  const { trackTip, statusById } = usePendingTips(token, handleTipVerified)
+  const { trackTip, statusById } = usePendingTips(token, user?.wallet, handleTipVerified)
 
   useEffect(() => {
     let cancelled = false

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getFeed, createPost, toggleLike, addComment, getPost, getProfile, recordPostView, getFollowing, bookmarkPost, removeBookmark } from '../lib/api'
@@ -186,6 +186,7 @@ function Feed() {
   const [error, setError] = useState(null)
   const [commentState, setCommentState] = useState({})
   const [tippingPost, setTippingPost] = useState(null)
+  const [activeTipId, setActiveTipId] = useState(null)
   const [followingUsers, setFollowingUsers] = useState([])
   const [feedScope, setFeedScope] = useState('all')
 
@@ -197,7 +198,22 @@ function Feed() {
   const [myAvatar, setMyAvatar] = useState(null)
   const viewedPostsRef = useRef(new Set())
 
-  async function loadFeed() {
+  // Applies a verified tip's amount to the matching post's tipTotal. Used by
+  // usePendingTips, which keeps polling even after TipModal is closed or the
+  // user navigates within this page, so a tip that verifies after the modal
+  // is dismissed still updates the icon.
+  const handleTipVerified = useCallback((tip) => {
+    if (!tip?.postId) return
+    setPosts((prev) => prev.map((post) =>
+      post.id === tip.postId
+        ? { ...post, tipTotal: (Number(post.tipTotal || 0) + Number(tip.amount || 0)).toString() }
+        : post
+    ))
+  }, [])
+
+  const { trackTip, statusById } = usePendingTips(token, user?.wallet, handleTipVerified)
+
+  const loadFeed = useCallback(async () => {
     setLoading(true)
     try {
       const data = await getFeed(undefined, token || undefined, feedScope)
@@ -210,7 +226,7 @@ function Feed() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [feedScope, token])
 
   useEffect(() => {
     if (!user?.wallet) {
@@ -622,10 +638,18 @@ function Feed() {
       {tippingPost && (
         <TipModal
           post={tippingPost}
-          onClose={() => setTippingPost(null)}
+          onClose={() => { setTippingPost(null); setActiveTipId(null) }}
+          onPending={(result) => {
+            trackTip(result?.id, { postId: tippingPost.id, amount: Number(result?.amount) })
+            setActiveTipId(result?.id)
+          }}
+          verificationStatus={activeTipId ? statusById[activeTipId] : undefined}
           onSuccess={(result) => {
-            setPosts((prev) => prev.map((post) => post.id === tippingPost.id ? { ...post, tipTotal: result.status === 'verified' ? (Number(post.tipTotal || 0) + Number(result.amount || 0)).toString() : post.tipTotal } : post))
-            setTippingPost(null)
+            if (result?.status === 'verified') {
+              setPosts((prev) => prev.map((post) => post.id === tippingPost.id ? { ...post, tipTotal: (Number(post.tipTotal || 0) + Number(result.amount || 0)).toString() } : post))
+              setTippingPost(null)
+              setActiveTipId(null)
+            }
           }}
         />
       )}

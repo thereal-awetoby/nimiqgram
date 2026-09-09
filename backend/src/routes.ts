@@ -14,7 +14,7 @@ const postSchema = z.object({
 }).refine((post) => Boolean(post.mediaUrl) === Boolean(post.mediaType), {
   message: "mediaUrl and mediaType must be provided together"
 });
-const commentSchema = z.object({ text: z.string().trim().min(1).max(1000) });
+const commentSchema = z.object({ text: z.string().trim().min(1).max(1000), parentCommentId: z.string().uuid().nullable().optional() });
 const tipSchema = z.object({ toWallet: walletSchema.shape.wallet, postId: z.string().uuid().optional(), amount: z.coerce.number().positive(), txHash: z.string().trim().toLowerCase().regex(/^[0-9a-f]{64}$/, "txHash must be a 32-byte hexadecimal transaction hash") });
 const notificationReadSchema = z.object({ ids: z.array(z.string().uuid()).optional() });
 
@@ -390,7 +390,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
          like_count,
          comment_count,
          save_count,
-         verified_tip_total,
+         verified_tip_total as tip_total,
          verified_tip_count,
          streak,
          (
@@ -448,10 +448,10 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     );
     if (result.rowCount === 0) return reply.notFound("post not found");
     const comments = await pool.query(
-      `select c.id, c.text, c.created_at, c.author_wallet, u.username from comments c join users u on u.wallet = c.author_wallet where c.post_id = $1 order by c.created_at asc`,
+      `select c.id, c.text, c.created_at, c.parent_comment_id, c.author_wallet, u.username from comments c join users u on u.wallet = c.author_wallet where c.post_id = $1 order by c.created_at asc`,
       [params.id]
     );
-    return { ...mapPost(result.rows[0]), comments: comments.rows.map((row: Record<string, any>) => ({ id: row.id, text: row.text, createdAt: row.created_at, author: { wallet: row.author_wallet, username: row.username } })) };
+    return { ...mapPost(result.rows[0]), comments: comments.rows.map((row: Record<string, any>) => ({ id: row.id, text: row.text, createdAt: row.created_at, parentCommentId: row.parent_comment_id, author: { wallet: row.author_wallet, username: row.username } })) };
   });
 
   app.post("/posts/:id/like", async (request, reply) => {
@@ -500,9 +500,13 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     if (!body.success) return reply.code(400).send({ error: body.error.flatten() });
     const post = await pool.query(`select author_wallet from posts where id = $1`, [params.id]);
     if (post.rowCount === 0) return reply.notFound("post not found");
+    if (body.data.parentCommentId) {
+      const parent = await pool.query(`select id from comments where id = $1 and post_id = $2`, [body.data.parentCommentId, params.id]);
+      if (parent.rowCount === 0) return reply.badRequest("parent comment not found on this post");
+    }
     const result = await pool.query(
-      `insert into comments (post_id, author_wallet, text) values ($1, $2, $3) returning id, text, created_at`,
-      [params.id, session.wallet, body.data.text]
+      `insert into comments (post_id, author_wallet, text, parent_comment_id) values ($1, $2, $3, $4) returning id, text, created_at, parent_comment_id`,
+      [params.id, session.wallet, body.data.text, body.data.parentCommentId ?? null]
     );
     if (post.rows[0].author_wallet !== session.wallet) {
       await pool.query(
@@ -520,6 +524,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       id: result.rows[0].id,
       text: result.rows[0].text,
       createdAt: result.rows[0].created_at,
+      parentCommentId: result.rows[0].parent_comment_id,
       author: {
         wallet: authorRow.wallet,
         displayName: authorRow.display_name,
