@@ -42,6 +42,14 @@ function EyeIcon() {
   )
 }
 
+function BookmarkIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M6 4.5A2.5 2.5 0 0 1 8.5 2h7A2.5 2.5 0 0 1 18 4.5V22l-6-3.5L6 22V4.5Z" />
+    </svg>
+  )
+}
+
 function wait(milliseconds) {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds))
 }
@@ -81,6 +89,32 @@ function Profile() {
     if (!post.mediaUrl) return null
     if (post.mediaType === 'video') return <VideoPreview src={post.mediaUrl} style={{ width: '100%', maxHeight: 260, marginTop: 8, borderRadius: 10 }} />
     return <img src={post.mediaUrl} alt="" style={{ display: 'block', width: '100%', maxHeight: 260, objectFit: 'cover', marginTop: 8, borderRadius: 10 }} />
+  }
+
+  function ProfilePost({ post }) {
+    return (
+      <Link to={`/post/${post.id}`} style={{ display: 'block', color: 'inherit', padding: '10px 0', borderBottom: '1px solid var(--nav-border)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'baseline' }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>{post.author?.displayName || post.author?.username || post.author?.wallet}</div>
+          {formatPostDate(post.createdAt) && <time dateTime={post.createdAt} style={{ color: 'var(--text-muted)', fontSize: 11, whiteSpace: 'nowrap' }}>{formatPostDate(post.createdAt)}</time>}
+        </div>
+        <div style={{ fontSize: 14, lineHeight: 1.4, marginTop: 5 }}>{post.text}</div>
+        <ProfilePostMedia post={post} />
+        {post.redPacket && (
+          <div style={{ marginTop: 8, padding: 10, border: '1px solid var(--tip-accent)', borderRadius: 10, background: 'rgba(200, 139, 20, 0.08)' }}>
+            <strong style={{ color: 'var(--tip-accent)' }}>Red packet</strong>
+            <div style={{ marginTop: 3, fontSize: 12 }}>{post.redPacket.remainingAmount} NIM remaining for {Math.max(0, Number(post.redPacket.claimLimit) - Number(post.redPacket.claimedCount))} people</div>
+          </div>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: 9, gap: 2, fontSize: 12.5, fontWeight: 600 }}>
+          <span title="Comments" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: 'var(--comment-accent)' }}><CommentIcon /> {post.commentCount ?? 0}</span>
+          <span title="Tips" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: 'var(--tip-accent)' }}><TipIcon /> {post.tipTotal ?? 0}</span>
+          <span title="Likes" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: 'var(--like-accent)' }}><HeartIcon /> {post.likeCount ?? 0}</span>
+          <span title="Views" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: 'var(--view-accent)' }}><EyeIcon /> {post.viewCount ?? 0}</span>
+          <span title="Bookmarks" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: 'var(--accent-color)' }}><BookmarkIcon /> {post.bookmarkCount ?? 0}</span>
+        </div>
+      </Link>
+    )
   }
 
   useEffect(() => {
@@ -461,7 +495,8 @@ function Profile() {
             {profileTab === 'activity' ? (
               <div>
                 {streakLoading ? <LoadingHexagon label="Loading activity" /> : <div style={{ display: 'flex', justifyContent: 'center', gap: 32, marginBottom: 18 }}><div><strong style={{ color: 'var(--accent-color)', fontSize: 22 }}>{streakData?.currentStreak || 0}</strong><div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Current streak</div></div><div><strong style={{ color: 'var(--accent-color)', fontSize: 22 }}>{streakData?.longestStreak || 0}</strong><div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Longest streak</div></div></div>}
-                {tabData.tips.length === 0 ? <p style={{ color: 'var(--text-muted)' }}>No tip activity yet.</p> : tabData.tips.map((tip) => {
+                {tabData.posts.filter((post) => post.redPacket).map((post) => <ProfilePost key={`red-packet-${post.id}`} post={post} />)}
+                {tabData.tips.length === 0 && !tabData.posts.some((post) => post.redPacket) ? <p style={{ color: 'var(--text-muted)' }}>No activity yet.</p> : tabData.tips.map((tip) => {
                   const isReceived = tip.kind === 'received';
                   const counterparty = isReceived ? (tip.from_display_name || tip.from_username || tip.from_wallet || tip.counterparty_wallet) : (tip.to_display_name || tip.to_username || tip.to_wallet || tip.counterparty_wallet);
                   const actionLabel = isReceived ? 'Tip received from' : 'Tip sent to';
@@ -477,24 +512,9 @@ function Profile() {
                 })}
               </div>
             ) : profileTab === 'bookmarks' ? (
-              tabData.bookmarks.length === 0 ? <p style={{ color: 'var(--text-muted)' }}>No bookmarks yet.</p> : tabData.bookmarks.map((post) => <div key={post.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--nav-border)' }}><div style={{ fontSize: 14, lineHeight: 1.4 }}>{post.text}</div><ProfilePostMedia post={post} /></div>)
+              tabData.bookmarks.length === 0 ? <p style={{ color: 'var(--text-muted)' }}>No bookmarks yet.</p> : tabData.bookmarks.map((post) => <ProfilePost key={post.id} post={post} />)
             ) : (
-              (tabData[profileTab] || []).length === 0 ? <p style={{ color: 'var(--text-muted)' }}>{profileTab === 'likes' ? 'No liked posts yet.' : 'No posts yet.'}</p> : (tabData[profileTab] || []).map((post) => (
-                <div key={post.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--nav-border)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'baseline' }}>
-                    <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>{post.author?.displayName || post.author?.username || post.author?.wallet}</div>
-                    {formatPostDate(post.createdAt) && <time dateTime={post.createdAt} style={{ color: 'var(--text-muted)', fontSize: 11, whiteSpace: 'nowrap' }}>{formatPostDate(post.createdAt)}</time>}
-                  </div>
-                  <div style={{ fontSize: 14, lineHeight: 1.4, marginTop: 5 }}>{post.text}</div>
-                  <ProfilePostMedia post={post} />
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: 9, gap: 2, fontSize: 12.5, fontWeight: 600 }}>
-                    <span title="Comments" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: 'var(--comment-accent)' }}><CommentIcon /> {post.commentCount ?? 0}</span>
-                    <span title="Tips" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: 'var(--tip-accent)' }}><TipIcon /> {post.tipTotal ?? 0}</span>
-                    <span title="Likes" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: 'var(--like-accent)' }}><HeartIcon /> {post.likeCount ?? 0}</span>
-                    <span title="Views" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: 'var(--view-accent)' }}><EyeIcon /> {post.viewCount ?? 0}</span>
-                  </div>
-                </div>
-              ))
+              (tabData[profileTab] || []).length === 0 ? <p style={{ color: 'var(--text-muted)' }}>{profileTab === 'likes' ? 'No liked posts yet.' : 'No posts yet.'}</p> : (tabData[profileTab] || []).map((post) => <ProfilePost key={post.id} post={post} />)
             )}
           </div>
         )}

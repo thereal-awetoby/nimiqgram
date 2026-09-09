@@ -189,6 +189,7 @@ function Feed() {
   const [commentState, setCommentState] = useState({})
   const [tippingPost, setTippingPost] = useState(null)
   const [redPacketOpen, setRedPacketOpen] = useState(false)
+  const [claimConfirmationId, setClaimConfirmationId] = useState(null)
   const [activeTipId, setActiveTipId] = useState(null)
   const [followingUsers, setFollowingUsers] = useState([])
   const [feedScope, setFeedScope] = useState('all')
@@ -381,6 +382,7 @@ function Feed() {
         : post
       ))
       setError(`You claimed ${result.amount} NIM.`)
+      setClaimConfirmationId(null)
     } catch (err) {
       setError(err.message)
     }
@@ -608,12 +610,19 @@ function Feed() {
                         <strong style={{ color: 'var(--tip-accent)' }}>Red packet</strong>
                         <div style={{ marginTop: 4, fontSize: 13 }}>{post.redPacket.remainingAmount} NIM remaining for {Math.max(0, Number(post.redPacket.claimLimit) - Number(post.redPacket.claimedCount))} people</div>
                         <button
-                          onClick={(event) => { event.stopPropagation(); handleClaimRedPacket(post.redPacket.id) }}
+                          onClick={(event) => { event.stopPropagation(); setClaimConfirmationId(post.redPacket.id) }}
                           disabled={!isLoggedIn || post.redPacket.status !== 'active'}
                           style={{ marginTop: 8, border: 'none', borderRadius: 20, padding: '7px 14px', background: 'var(--tip-accent)', color: 'var(--bg-color)', fontWeight: 700 }}
                         >
                           {post.redPacket.status === 'active' ? 'Claim' : 'Closed'}
                         </button>
+                        {claimConfirmationId === post.redPacket.id && (
+                          <div onClick={(event) => event.stopPropagation()} style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Claim your share?</span>
+                            <button onClick={(event) => { event.stopPropagation(); handleClaimRedPacket(post.redPacket.id) }} style={{ border: 'none', borderRadius: 16, padding: '6px 10px', background: 'var(--accent-color)', color: 'var(--bg-color)', fontWeight: 700 }}>Confirm</button>
+                            <button onClick={(event) => { event.stopPropagation(); setClaimConfirmationId(null) }} style={{ border: '1px solid var(--nav-border)', borderRadius: 16, padding: '5px 10px', background: 'transparent', color: 'var(--text-color)' }}>Cancel</button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </Link>

@@ -95,6 +95,7 @@ function Post() {
   const [tippingPost, setTippingPost] = useState(null)
   const [activeTipId, setActiveTipId] = useState(null)
   const [claimMessage, setClaimMessage] = useState(null)
+  const [claimConfirmationOpen, setClaimConfirmationOpen] = useState(false)
 
   // Applies a verified tip's amount to the current post's tipTotal. Used by
   // usePendingTips, which keeps polling even after TipModal is closed, so a
@@ -195,6 +196,7 @@ function Post() {
       const result = await claimRedPacket(token, post.redPacket.id)
       setPost((current) => current ? { ...current, redPacket: { ...current.redPacket, remainingAmount: result.remainingAmount, claimedCount: result.claimedCount, status: result.status } } : current)
       setClaimMessage(`You claimed ${result.amount} NIM.`)
+      setClaimConfirmationOpen(false)
     } catch (err) {
       setClaimMessage(err.message)
     }
@@ -227,9 +229,16 @@ function Post() {
           <div style={{ marginTop: 12, padding: 12, border: '1px solid var(--tip-accent)', borderRadius: 12, background: 'rgba(200, 139, 20, 0.08)' }}>
             <strong style={{ color: 'var(--tip-accent)' }}>Red packet</strong>
             <div style={{ marginTop: 4, fontSize: 13 }}>{post.redPacket.remainingAmount} NIM remaining for {Math.max(0, Number(post.redPacket.claimLimit) - Number(post.redPacket.claimedCount))} people</div>
-            <button onClick={handleClaimRedPacket} disabled={!isLoggedIn || post.redPacket.status !== 'active'} style={{ marginTop: 8, border: 'none', borderRadius: 20, padding: '7px 14px', background: 'var(--tip-accent)', color: 'var(--bg-color)', fontWeight: 700 }}>
+            <button onClick={() => setClaimConfirmationOpen(true)} disabled={!isLoggedIn || post.redPacket.status !== 'active'} style={{ marginTop: 8, border: 'none', borderRadius: 20, padding: '7px 14px', background: 'var(--tip-accent)', color: 'var(--bg-color)', fontWeight: 700 }}>
               {post.redPacket.status === 'active' ? 'Claim' : 'Closed'}
             </button>
+            {claimConfirmationOpen && (
+              <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Claim your share?</span>
+                <button onClick={handleClaimRedPacket} style={{ border: 'none', borderRadius: 16, padding: '6px 10px', background: 'var(--accent-color)', color: 'var(--bg-color)', fontWeight: 700 }}>Confirm</button>
+                <button onClick={() => setClaimConfirmationOpen(false)} style={{ border: '1px solid var(--nav-border)', borderRadius: 16, padding: '5px 10px', background: 'transparent', color: 'var(--text-color)' }}>Cancel</button>
+              </div>
+            )}
             {claimMessage && <div style={{ marginTop: 6, color: 'var(--text-muted)', fontSize: 12 }}>{claimMessage}</div>}
           </div>
         )}
