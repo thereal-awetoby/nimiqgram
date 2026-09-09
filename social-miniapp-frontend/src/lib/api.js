@@ -85,30 +85,30 @@ export function unfollowUser(wallet, token) {
 }
 
 export function createPost(token, { text, mediaUrl, mediaType }) {
-
-  export function createRedPacket(token, { amount, claimLimit, expiresAt }) {
-    return authedRequest('/red-packets', token, {
-      method: 'POST',
-      body: JSON.stringify({ amount, claimLimit, expiresAt }),
-    })
-  }
-
-  export function fundRedPacket(token, packetId, { txHash }) {
-    return authedRequest(`/red-packets/${packetId}/fund`, token, {
-      method: 'POST',
-      body: JSON.stringify({ txHash }),
-    })
-  }
-
-  export function claimRedPacket(token, packetId) {
-    return authedRequest(`/red-packets/${packetId}/claim`, token, {
-      method: 'POST',
-      body: JSON.stringify({}),
-    })
-  }
   return authedRequest('/posts', token, {
     method: 'POST',
     body: JSON.stringify({ text, mediaUrl, mediaType }),
+  })
+}
+
+export function createRedPacket(token, { amount, claimLimit, expiresAt }) {
+  return authedRequest('/red-packets', token, {
+    method: 'POST',
+    body: JSON.stringify({ amount, claimLimit, expiresAt }),
+  })
+}
+
+export function fundRedPacket(token, packetId, { txHash }) {
+  return authedRequest(`/red-packets/${packetId}/fund`, token, {
+    method: 'POST',
+    body: JSON.stringify({ txHash }),
+  })
+}
+
+export function claimRedPacket(token, packetId) {
+  return authedRequest(`/red-packets/${packetId}/claim`, token, {
+    method: 'POST',
+    body: JSON.stringify({}),
   })
 }
 
