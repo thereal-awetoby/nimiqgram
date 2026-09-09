@@ -222,11 +222,11 @@ function Post() {
           <ActionButton onClick={() => document.getElementById('post-comment-input')?.focus()} active={false} color="var(--comment-accent)">
             <CommentIcon /> {post.commentCount ?? 0}
           </ActionButton>
-          <ActionButton onClick={() => setTippingPost(post)} disabled={!isLoggedIn} color="var(--tip-accent)">
-            <TipIcon /> {post.tipTotal ?? 0}
-          </ActionButton>
           <ActionButton onClick={handleLike} disabled={!isLoggedIn} active={liked} color="var(--like-accent)">
             <HeartIcon filled={liked} /> {post.likeCount ?? 0}
+          </ActionButton>
+          <ActionButton onClick={() => setTippingPost(post)} disabled={!isLoggedIn} color="var(--tip-accent)">
+            <TipIcon /> {post.tipTotal ?? 0}
           </ActionButton>
           <ActionButton disabled color="var(--view-accent)">
             <EyeIcon /> {post.viewCount ?? 0}

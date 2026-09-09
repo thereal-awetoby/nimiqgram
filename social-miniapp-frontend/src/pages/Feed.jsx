@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getFeed, createPost, toggleLike, addComment, getPost, getProfile, recordPostView, getFollowing } from '../lib/api'
+import { getFeed, createPost, toggleLike, addComment, getPost, getProfile, recordPostView, getFollowing, bookmarkPost, removeBookmark } from '../lib/api'
 import { uploadMedia, getMediaType } from '../lib/upload'
 import TipModal from '../components/TipModal'
 import Avatar from '../components/Avatar'
@@ -9,7 +9,6 @@ import LoadingHexagon from '../components/LoadingHexagon'
 import CommentThread from '../components/CommentThread'
 import VideoPreview from '../components/VideoPreview'
 import { formatPostDate } from '../lib/date'
-import { usePendingTips } from '../hooks/usePendingTips'
 
 const MAX_VIDEO_SECONDS = 5 * 60
 const URL_REGEX = /(https?:\/\/[^\s]+)/g
@@ -68,6 +67,14 @@ function EyeIcon() {
   )
 }
 
+function BookmarkIcon({ filled }) {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 4.5A2.5 2.5 0 0 1 8.5 2h7A2.5 2.5 0 0 1 18 4.5V22l-6-3.5L6 22V4.5Z" />
+    </svg>
+  )
+}
+
 function ActionButton({ onClick, disabled, active, children, compact = false, color = 'var(--text-muted)' }) {
   return (
     <button
@@ -88,17 +95,6 @@ function ActionButton({ onClick, disabled, active, children, compact = false, co
     >
       {children}
     </button>
-  )
-}
-
-function ShareIcon() {
-  return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M16 8a3 3 0 1 0-2.8-4H13a3 3 0 0 0 0 6h.2A3 3 0 0 0 16 8Z" />
-      <path d="M8 14a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" />
-      <path d="M18 20a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
-      <path d="M10.5 15.5 15 12.5M10.5 8.5 15 11.5" />
-    </svg>
   )
 }
 
@@ -183,13 +179,13 @@ function Feed() {
   const { token, isLoggedIn, user } = useAuth()
   const [posts, setPosts] = useState([])
   const [likedMap, setLikedMap] = useState({})
+  const [bookmarkedMap, setBookmarkedMap] = useState({})
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(true)
   const [posting, setPosting] = useState(false)
   const [error, setError] = useState(null)
   const [commentState, setCommentState] = useState({})
   const [tippingPost, setTippingPost] = useState(null)
-  const [activeTipId, setActiveTipId] = useState(null)
   const [followingUsers, setFollowingUsers] = useState([])
   const [feedScope, setFeedScope] = useState('all')
 
@@ -201,22 +197,7 @@ function Feed() {
   const [myAvatar, setMyAvatar] = useState(null)
   const viewedPostsRef = useRef(new Set())
 
-  // Applies a verified tip's amount to the matching post's tipTotal. Used by
-  // usePendingTips, which keeps polling even after TipModal is closed or the
-  // user navigates within this page, so a tip that verifies after the modal
-  // is dismissed still updates the icon.
-  const handleTipVerified = useCallback((tip) => {
-    if (!tip?.postId) return
-    setPosts((prev) => prev.map((post) =>
-      post.id === tip.postId
-        ? { ...post, tipTotal: (Number(post.tipTotal || 0) + Number(tip.amount || 0)).toString() }
-        : post
-    ))
-  }, [])
-
-  const { trackTip, statusById } = usePendingTips(token, handleTipVerified)
-
-  const loadFeed = useCallback(async () => {
+  async function loadFeed() {
     setLoading(true)
     try {
       const data = await getFeed(undefined, token || undefined, feedScope)
@@ -229,11 +210,11 @@ function Feed() {
     } finally {
       setLoading(false)
     }
-  }, [feedScope, token])
+  }
 
   useEffect(() => {
     if (!user?.wallet) {
-      Promise.resolve().then(() => setFeedScope('all'))
+      setFeedScope('all')
       return
     }
 
@@ -242,19 +223,19 @@ function Feed() {
       .catch(() => setFollowingUsers([]))
 
     if (!token) {
-      Promise.resolve().then(() => setFeedScope('all'))
+      setFeedScope('all')
       return
     }
 
-    Promise.resolve().then(() => setFeedScope((prev) => (prev === 'following' || prev === 'all' ? prev : 'all')))
+    setFeedScope((prev) => (prev === 'following' || prev === 'all' ? prev : 'all'))
   }, [user, token])
 
   useEffect(() => {
     if (!token && !user) {
-      Promise.resolve().then(() => setFeedScope('all'))
+      setFeedScope('all')
     }
-    Promise.resolve().then(() => loadFeed())
-  }, [loadFeed, token, user])
+    loadFeed()
+  }, [feedScope, token])
 
   useEffect(() => {
     if (!isLoggedIn || !posts.length || !token) return
@@ -347,6 +328,21 @@ function Feed() {
       const result = await toggleLike(token, postId)
       setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, likeCount: result.likeCount, likedByMe: result.liked } : p)))
       setLikedMap((prev) => ({ ...prev, [postId]: result.liked }))
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  async function handleBookmark(postId) {
+    if (!isLoggedIn) return
+    const currentlyBookmarked = Boolean(bookmarkedMap[postId])
+    try {
+      if (currentlyBookmarked) {
+        await removeBookmark(postId, token)
+      } else {
+        await bookmarkPost(postId, token)
+      }
+      setBookmarkedMap((prev) => ({ ...prev, [postId]: !currentlyBookmarked }))
     } catch (err) {
       console.error(err)
     }
@@ -519,6 +515,7 @@ function Feed() {
         posts.map((post) => {
           const cState = commentState[post.id]
           const isLiked = likedMap[post.id]
+          const isBookmarked = Boolean(bookmarkedMap[post.id])
           return (
             <div
               key={post.id}
@@ -576,8 +573,8 @@ function Feed() {
                     <ActionButton disabled compact color="var(--view-accent)">
                       <EyeIcon /> {post.viewCount ?? 0}
                     </ActionButton>
-                    <ActionButton disabled compact color="var(--share-accent)">
-                      <ShareIcon />
+                    <ActionButton onClick={() => handleBookmark(post.id)} disabled={!isLoggedIn} active={isBookmarked} compact color="var(--accent-color)">
+                      <BookmarkIcon filled={isBookmarked} />
                     </ActionButton>
                   </div>
 
@@ -625,18 +622,10 @@ function Feed() {
       {tippingPost && (
         <TipModal
           post={tippingPost}
-          onClose={() => { setTippingPost(null); setActiveTipId(null) }}
-          onPending={(result) => {
-            trackTip(result?.id, { postId: tippingPost.id, amount: Number(result?.amount) })
-            setActiveTipId(result?.id)
-          }}
-          verificationStatus={activeTipId ? statusById[activeTipId] : undefined}
+          onClose={() => setTippingPost(null)}
           onSuccess={(result) => {
-            if (result?.status === 'verified') {
-              setPosts((prev) => prev.map((post) => post.id === tippingPost.id ? { ...post, tipTotal: (Number(post.tipTotal || 0) + Number(result.amount || 0)).toString() } : post))
-              setTippingPost(null)
-              setActiveTipId(null)
-            }
+            setPosts((prev) => prev.map((post) => post.id === tippingPost.id ? { ...post, tipTotal: result.status === 'verified' ? (Number(post.tipTotal || 0) + Number(result.amount || 0)).toString() : post.tipTotal } : post))
+            setTippingPost(null)
           }}
         />
       )}

@@ -43,6 +43,7 @@ function mapPost(row: Record<string, any>) {
     },
     likeCount: row.like_count,
     likedByMe: Boolean(row.liked_by_me),
+    bookmarkedByMe: Boolean(row.bookmarked_by_me),
     commentCount: row.comment_count,
     tipTotal: row.tip_total,
     viewCount: row.view_count ?? 0
@@ -400,6 +401,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
            8 * creator_score
          ) as feed_score,
          exists(select 1 from likes l2 where l2.post_id = id and l2.wallet = $2) as liked_by_me,
+         exists(select 1 from bookmarks b2 where b2.post_id = id and b2.wallet = $2) as bookmarked_by_me,
          (select count(*)::int from post_views v where v.post_id = id) as view_count
        from scored
        where created_at >= now() - interval '30 days'
@@ -434,7 +436,8 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
               count(distinct l.wallet)::int as like_count, count(distinct c.id)::int as comment_count,
               coalesce(sum(t.amount_nim) filter (where t.status = 'verified'), 0)::text as tip_total,
               count(distinct v.viewer_wallet)::int as view_count,
-              exists(select 1 from likes l2 where l2.post_id = p.id and l2.wallet = $2) as liked_by_me
+              exists(select 1 from likes l2 where l2.post_id = p.id and l2.wallet = $2) as liked_by_me,
+              exists(select 1 from bookmarks b2 where b2.post_id = p.id and b2.wallet = $2) as bookmarked_by_me
        from posts p join users u on u.wallet = p.author_wallet
        left join likes l on l.post_id = p.id
        left join comments c on c.post_id = p.id
