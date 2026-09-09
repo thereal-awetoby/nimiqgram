@@ -9,6 +9,7 @@ import LoadingHexagon from '../components/LoadingHexagon'
 import CommentThread from '../components/CommentThread'
 import VideoPreview from '../components/VideoPreview'
 import { formatPostDate } from '../lib/date'
+import { usePendingTips } from '../hooks/usePendingTips'
 
 const MAX_VIDEO_SECONDS = 5 * 60
 const URL_REGEX = /(https?:\/\/[^\s]+)/g
