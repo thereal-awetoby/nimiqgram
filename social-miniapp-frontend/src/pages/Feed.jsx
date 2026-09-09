@@ -9,6 +9,7 @@ import LoadingHexagon from '../components/LoadingHexagon'
 import CommentThread from '../components/CommentThread'
 import VideoPreview from '../components/VideoPreview'
 import { formatPostDate } from '../lib/date'
+import { formatNimAmount } from '../lib/number'
 import { usePendingTips } from '../hooks/usePendingTips'
 import RedPacketModal from '../components/RedPacketModal'
 
@@ -601,10 +602,11 @@ function Feed() {
                         <PostMedia url={post.mediaUrl} type={post.mediaType} />
                       </div>
                     )}
+                  </Link>
 
                     {post.redPacket && (
                       <div
-                        onClick={(event) => event.preventDefault()}
+                        onClick={(event) => event.stopPropagation()}
                         style={{ marginTop: 10, padding: 12, border: '1px solid var(--tip-accent)', borderRadius: 12, background: 'rgba(200, 139, 20, 0.08)' }}
                       >
                         <strong style={{ color: 'var(--tip-accent)' }}>Red packet</strong>
@@ -625,7 +627,6 @@ function Feed() {
                         )}
                       </div>
                     )}
-                  </Link>
 
                   <div
                     style={{
@@ -645,7 +646,10 @@ function Feed() {
                       <HeartIcon filled={isLiked} /> {post.likeCount ?? 0}
                     </ActionButton>
                     <ActionButton onClick={() => setTippingPost(post)} disabled={!isLoggedIn} compact color="var(--tip-accent)">
-                      <TipIcon /> {post.tipTotal ?? 0}
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', minWidth: 0 }}>
+                        <span style={{ display: 'inline-flex', flexShrink: 0 }}><TipIcon /></span>
+                        <span>{formatNimAmount(post.tipTotal)}</span>
+                      </span>
                     </ActionButton>
                     <ActionButton disabled compact color="var(--view-accent)">
                       <EyeIcon /> {post.viewCount ?? 0}

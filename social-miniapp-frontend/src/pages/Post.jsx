@@ -7,6 +7,7 @@ import LoadingHexagon from '../components/LoadingHexagon'
 import CommentThread from '../components/CommentThread'
 import TipModal from '../components/TipModal'
 import { formatPostDate } from '../lib/date'
+import { formatNimAmount } from '../lib/number'
 import VideoPreview from '../components/VideoPreview'
 import { usePendingTips } from '../hooks/usePendingTips'
 
@@ -261,7 +262,10 @@ function Post() {
             <HeartIcon filled={liked} /> {post.likeCount ?? 0}
           </ActionButton>
           <ActionButton onClick={() => setTippingPost(post)} disabled={!isLoggedIn} color="var(--tip-accent)">
-            <TipIcon /> {post.tipTotal ?? 0}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', minWidth: 0 }}>
+              <span style={{ display: 'inline-flex', flexShrink: 0 }}><TipIcon /></span>
+              <span>{formatNimAmount(post.tipTotal)}</span>
+            </span>
           </ActionButton>
           <ActionButton disabled color="var(--view-accent)">
             <EyeIcon /> {post.viewCount ?? 0}

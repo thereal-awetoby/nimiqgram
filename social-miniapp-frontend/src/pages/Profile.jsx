@@ -6,6 +6,7 @@ import { uploadMedia } from '../lib/upload'
 import Avatar from '../components/Avatar'
 import LoadingHexagon from '../components/LoadingHexagon'
 import { formatPostDate } from '../lib/date'
+import { formatNimAmount } from '../lib/number'
 import VideoPreview from '../components/VideoPreview'
 
 function HeartIcon() {
@@ -108,7 +109,7 @@ function Profile() {
         )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: 9, gap: 2, fontSize: 12.5, fontWeight: 600 }}>
           <span title="Comments" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: 'var(--comment-accent)' }}><CommentIcon /> {post.commentCount ?? 0}</span>
-          <span title="Tips" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: 'var(--tip-accent)' }}><TipIcon /> {post.tipTotal ?? 0}</span>
+          <span title="Tips" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: 'var(--tip-accent)' }}><span style={{ display: 'inline-flex', flexShrink: 0 }}><TipIcon /></span><span style={{ whiteSpace: 'nowrap' }}>{formatNimAmount(post.tipTotal)}</span></span>
           <span title="Likes" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: 'var(--like-accent)' }}><HeartIcon /> {post.likeCount ?? 0}</span>
           <span title="Views" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: 'var(--view-accent)' }}><EyeIcon /> {post.viewCount ?? 0}</span>
           <span title="Bookmarks" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: 'var(--accent-color)' }}><BookmarkIcon /> {post.bookmarkCount ?? 0}</span>
