@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { addComment, getPost, getBookmarkStatus, bookmarkPost, removeBookmark, toggleLike, recordPostView } from '../lib/api'
+import { addComment, getPost, getBookmarkStatus, bookmarkPost, removeBookmark, toggleLike, recordPostView, claimRedPacket } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import Avatar from '../components/Avatar'
 import LoadingHexagon from '../components/LoadingHexagon'
@@ -94,6 +94,7 @@ function Post() {
   const [liked, setLiked] = useState(false)
   const [tippingPost, setTippingPost] = useState(null)
   const [activeTipId, setActiveTipId] = useState(null)
+  const [claimMessage, setClaimMessage] = useState(null)
 
   // Applies a verified tip's amount to the current post's tipTotal. Used by
   // usePendingTips, which keeps polling even after TipModal is closed, so a
@@ -151,6 +152,10 @@ function Post() {
       if (bookmarked) await removeBookmark(postId, token)
       else await bookmarkPost(postId, token)
       setBookmarked((value) => !value)
+      setPost((current) => current
+        ? { ...current, bookmarkCount: Math.max(0, Number(current.bookmarkCount || 0) + (bookmarked ? -1 : 1)) }
+        : current
+      )
     } catch (err) {
       setError(err.message)
     }
@@ -184,6 +189,17 @@ function Post() {
     }
   }
 
+  async function handleClaimRedPacket() {
+    if (!isLoggedIn || !post?.redPacket) return
+    try {
+      const result = await claimRedPacket(token, post.redPacket.id)
+      setPost((current) => current ? { ...current, redPacket: { ...current.redPacket, remainingAmount: result.remainingAmount, claimedCount: result.claimedCount, status: result.status } } : current)
+      setClaimMessage(`You claimed ${result.amount} NIM.`)
+    } catch (err) {
+      setClaimMessage(err.message)
+    }
+  }
+
   if (loading) return <LoadingHexagon label="Loading post" />
   if (error) return <p style={{ padding: 16, color: '#e0245e' }}>{error}</p>
   if (!post) return <p style={{ padding: 16, color: 'var(--text-muted)' }}>Post not found.</p>
@@ -207,6 +223,16 @@ function Post() {
         <p style={{ margin: '18px 0 12px', fontSize: 17, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{post.text}</p>
         {post.mediaUrl && post.mediaType === 'video' && <VideoPreview src={post.mediaUrl} style={{ width: '100%', maxHeight: 480, borderRadius: 12 }} />}
         {post.mediaUrl && post.mediaType !== 'video' && <img src={post.mediaUrl} alt="" style={{ display: 'block', width: '100%', maxHeight: 480, objectFit: 'contain', borderRadius: 12 }} />}
+        {post.redPacket && (
+          <div style={{ marginTop: 12, padding: 12, border: '1px solid var(--tip-accent)', borderRadius: 12, background: 'rgba(200, 139, 20, 0.08)' }}>
+            <strong style={{ color: 'var(--tip-accent)' }}>Red packet</strong>
+            <div style={{ marginTop: 4, fontSize: 13 }}>{post.redPacket.remainingAmount} NIM remaining for {Math.max(0, Number(post.redPacket.claimLimit) - Number(post.redPacket.claimedCount))} people</div>
+            <button onClick={handleClaimRedPacket} disabled={!isLoggedIn || post.redPacket.status !== 'active'} style={{ marginTop: 8, border: 'none', borderRadius: 20, padding: '7px 14px', background: 'var(--tip-accent)', color: 'var(--bg-color)', fontWeight: 700 }}>
+              {post.redPacket.status === 'active' ? 'Claim' : 'Closed'}
+            </button>
+            {claimMessage && <div style={{ marginTop: 6, color: 'var(--text-muted)', fontSize: 12 }}>{claimMessage}</div>}
+          </div>
+        )}
 
         <div
           style={{
@@ -234,7 +260,7 @@ function Post() {
           {isLoggedIn && (
             <ActionButton onClick={toggleBookmark} active={bookmarked} color="var(--accent-color)">
               <span aria-label={bookmarked ? 'Remove bookmark' : 'Save bookmark'} title={bookmarked ? 'Remove bookmark' : 'Save bookmark'}>
-                <BookmarkIcon filled={bookmarked} />
+                <BookmarkIcon filled={bookmarked} /> {post.bookmarkCount ?? 0}
               </span>
             </ActionButton>
           )}
@@ -259,6 +285,7 @@ function Post() {
             <CommentThread
               comments={post.comments}
               isLoggedIn={isLoggedIn}
+              token={token}
               onReply={(commentId, text) => submitComment(null, commentId, text)}
             />
           </div>

@@ -74,7 +74,7 @@ function Profile() {
   const [isFollowing, setIsFollowing] = useState(false)
   const [followLoading, setFollowLoading] = useState(false)
   const [profileTab, setProfileTab] = useState('posts')
-  const [tabData, setTabData] = useState({ posts: [], likes: [], tips: [], bookmarks: [] })
+  const [tabData, setTabData] = useState({ posts: [], likes: [], tips: [], bookmarks: [], bookmarkCount: 0 })
   const [tabLoading, setTabLoading] = useState(true)
 
   function ProfilePostMedia({ post }) {
@@ -141,7 +141,7 @@ function Profile() {
         const refreshedTips = (tips.tips || []).map((tip) => ({ ...tip, status: verifiedById.get(tip.id)?.status || tip.status }))
         const postsWereUpdated = verifiedTips.some((tip) => tip?.status === 'verified')
         const refreshedPosts = postsWereUpdated ? await getProfilePosts(targetWallet) : posts
-        setTabData({ posts: refreshedPosts.posts || [], likes: likes.posts || [], tips: refreshedTips, bookmarks: bookmarks.posts || [] })
+        setTabData({ posts: refreshedPosts.posts || [], likes: likes.posts || [], tips: refreshedTips, bookmarks: bookmarks.posts || [], bookmarkCount: bookmarks.count ?? bookmarks.posts?.length ?? 0 })
       })
       .catch((err) => setError(err.message))
       .finally(() => setTabLoading(false))
@@ -451,7 +451,7 @@ function Profile() {
         <hr style={{ border: 'none', borderTop: '1px solid var(--nav-border)', margin: '24px 0 18px' }} />
 
         <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--nav-border)', marginBottom: 18 }}>
-          {[['posts', 'Posts'], ['activity', 'Activity'], ['likes', 'Likes'], ...(isOwnProfile ? [['bookmarks', 'Bookmarks']] : [])].map(([value, label]) => (
+          {[['posts', 'Posts'], ['activity', 'Activity'], ['likes', 'Likes'], ...(isOwnProfile ? [['bookmarks', `Bookmarks ${tabData.bookmarkCount}`]] : [])].map(([value, label]) => (
             <button key={value} onClick={() => setProfileTab(value)} style={{ flex: 1, padding: '9px 4px', background: 'transparent', border: 'none', borderBottom: profileTab === value ? '2px solid var(--accent-color)' : '2px solid transparent', color: profileTab === value ? 'var(--accent-color)' : 'var(--text-muted)', fontSize: 12, fontWeight: 700 }}>{label}</button>
           ))}
         </div>

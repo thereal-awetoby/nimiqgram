@@ -13,6 +13,50 @@ type RpcResponse = {
   error?: { message?: string };
 };
 
+export async function nimiqRpc<T = unknown>(method: string, params: unknown[] = []): Promise<T> {
+  if (!config.NIMIQ_RPC_URL) throw new Error("Nimiq RPC is not configured");
+  const response = await fetch(config.NIMIQ_RPC_URL, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method, params })
+  });
+  if (!response.ok) throw new Error(`RPC HTTP ${response.status}`);
+  const payload = await response.json() as { result?: T; error?: { message?: string } };
+  if (payload.error) throw new Error(payload.error.message ?? `RPC ${method} failed`);
+  return payload.result as T;
+}
+
+export function nimToLunas(amountNim: string): bigint {
+  const [whole, fraction = ""] = amountNim.trim().split(".");
+  return BigInt(whole || "0") * 100000n + BigInt(fraction.padEnd(5, "0").slice(0, 5) || "0");
+}
+
+export async function sendEscrowTransfer(recipient: string, amountNim: string): Promise<string> {
+  if (!config.RED_PACKET_ESCROW_WALLET) throw new Error("Red packet escrow wallet is not configured");
+  const result = await nimiqRpc<string>("sendBasicTransaction", [
+    config.RED_PACKET_ESCROW_WALLET,
+    recipient,
+    Number(nimToLunas(amountNim))
+  ]);
+  return result;
+}
+
+export async function verifyBasicTransfer(txHash: string, expectedSender: string, expectedRecipient: string, expectedAmountNim: string): Promise<boolean> {
+  const payload = await getTransactionByHash(txHash.trim().replace(/^0x/i, "").toLowerCase());
+  if (payload.error || !payload.result) return false;
+  const nested = payload.result.data ?? payload.result.transaction;
+  const transaction = isRecord(nested) && Object.keys(nested).length > 0
+    ? nested
+    : payload.result;
+  const sender = normalizeWallet(transaction.fromAddress ?? transaction.sender ?? transaction.from);
+  const recipient = normalizeWallet(transaction.toAddress ?? transaction.recipient ?? transaction.to);
+  const rawValue = transaction.value ?? transaction.amount;
+  const value = typeof rawValue === "string" ? BigInt(rawValue) : typeof rawValue === "number" ? BigInt(Math.trunc(rawValue)) : undefined;
+  return sender === normalizeWallet(expectedSender)
+    && recipient === normalizeWallet(expectedRecipient)
+    && value === nimToLunas(expectedAmountNim);
+}
+
 async function getTransactionByHash(txHash: string): Promise<RpcResponse> {
   const response = await fetch(config.NIMIQ_RPC_URL!, {
     method: "POST",
@@ -42,12 +86,6 @@ function describeTransaction(transaction: Record<string, unknown>): string {
     networkId: transaction.networkId,
     blockNumber: transaction.blockNumber
   });
-}
-
-function nimToLunas(amountNim: string): bigint {
-  const [whole, fraction = ""] = amountNim.trim().split(".");
-  const normalizedFraction = fraction.padEnd(5, "0").slice(0, 5);
-  return BigInt(whole || "0") * 100000n + BigInt(normalizedFraction || "0");
 }
 
 function normalizeWallet(value: unknown): string | undefined {

@@ -1,8 +1,10 @@
 import type { FastifyInstance } from "fastify";
+import { randomInt } from "node:crypto";
 import { z } from "zod";
 import { consumeChallenge, createChallenge, getChallenge, issueSession, verifySession, verifyWalletSignature } from "./auth.js";
+import { config } from "./config.js";
 import { pool } from "./db.js";
-import { verifyTipTransaction } from "./nimiq-rpc.js";
+import { nimToLunas, sendEscrowTransfer, verifyBasicTransfer, verifyTipTransaction } from "./nimiq-rpc.js";
 
 const walletSchema = z.object({ wallet: z.string().min(1).max(128) });
 const verifySchema = walletSchema.extend({ signature: z.string().min(1), publicKey: z.string().min(1).optional() });
@@ -17,6 +19,12 @@ const postSchema = z.object({
 const commentSchema = z.object({ text: z.string().trim().min(1).max(1000), parentCommentId: z.string().uuid().nullable().optional() });
 const tipSchema = z.object({ toWallet: walletSchema.shape.wallet, postId: z.string().uuid().optional(), amount: z.coerce.number().positive(), txHash: z.string().trim().toLowerCase().regex(/^[0-9a-f]{64}$/, "txHash must be a 32-byte hexadecimal transaction hash") });
 const notificationReadSchema = z.object({ ids: z.array(z.string().uuid()).optional() });
+const redPacketSchema = z.object({
+  amount: z.coerce.number().positive().max(100000),
+  claimLimit: z.coerce.number().int().min(1).max(1000),
+  expiresAt: z.string().datetime()
+});
+const redPacketFundingSchema = z.object({ txHash: z.string().trim().toLowerCase().regex(/^[0-9a-f]{64}$/) });
 
 function getSession(request: { headers: { authorization?: string } }): { wallet: string } | undefined {
   const authorization = request.headers.authorization;
@@ -44,9 +52,19 @@ function mapPost(row: Record<string, any>) {
     likeCount: row.like_count,
     likedByMe: Boolean(row.liked_by_me),
     bookmarkedByMe: Boolean(row.bookmarked_by_me),
+    bookmarkCount: row.bookmark_count ?? row.save_count ?? 0,
     commentCount: row.comment_count,
     tipTotal: row.tip_total,
-    viewCount: row.view_count ?? 0
+    viewCount: row.view_count ?? 0,
+    redPacket: row.red_packet_id ? {
+      id: row.red_packet_id,
+      amount: row.red_packet_amount,
+      remainingAmount: row.red_packet_remaining,
+      claimLimit: row.red_packet_claim_limit,
+      claimedCount: row.red_packet_claimed_count,
+      status: row.red_packet_status,
+      expiresAt: row.red_packet_expires_at
+    } : null
   };
 }
 
@@ -209,10 +227,13 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     if (!session || session.wallet !== params.wallet) return reply.unauthorized();
     const result = await pool.query(
       `select p.id, p.text, p.media_url, p.media_type, p.created_at, u.wallet as author_wallet, u.display_name, u.username, u.avatar_url
-       from bookmarks b join posts p on p.id = b.post_id join users u on u.wallet = p.author_wallet where b.wallet = $1 order by b.created_at desc limit 50`,
+       from bookmarks b join posts p on p.id = b.post_id join users u on u.wallet = p.author_wallet where b.wallet = $1 order by b.created_at desc`,
       [params.wallet]
     );
-    return { posts: result.rows.map((row: Record<string, any>) => ({ id: row.id, text: row.text, mediaUrl: row.media_url, mediaType: row.media_type, createdAt: row.created_at, author: { wallet: row.author_wallet, displayName: row.display_name, username: row.username, avatarUrl: row.avatar_url } })) };
+    return {
+      count: result.rows.length,
+      posts: result.rows.map((row: Record<string, any>) => ({ id: row.id, text: row.text, mediaUrl: row.media_url, mediaType: row.media_type, createdAt: row.created_at, author: { wallet: row.author_wallet, displayName: row.display_name, username: row.username, avatarUrl: row.avatar_url } }))
+    };
   });
 
   app.get("/users/:wallet/following", async (request, reply) => {
@@ -337,6 +358,13 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
            u.username,
            u.bio,
            u.avatar_url,
+           rp.id as red_packet_id,
+           rp.total_amount_nim::text as red_packet_amount,
+           rp.remaining_amount_nim::text as red_packet_remaining,
+           rp.claim_limit as red_packet_claim_limit,
+           rp.claimed_count as red_packet_claimed_count,
+           rp.status as red_packet_status,
+           rp.expires_at as red_packet_expires_at,
            count(distinct l.wallet)::int as like_count,
            count(distinct c.id)::int as comment_count,
            count(distinct b.wallet)::int as save_count,
@@ -346,13 +374,14 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
            coalesce((select s.longest_streak from streaks s where s.wallet = p.author_wallet), 0) as longest_streak
          from posts p
          join users u on u.wallet = p.author_wallet
+         left join red_packets rp on rp.post_id = p.id
          left join likes l on l.post_id = p.id
          left join comments c on c.post_id = p.id
          left join bookmarks b on b.post_id = p.id
          left join tips t on t.post_id = p.id
          where p.created_at < $1
            and ($3 = 'all' or p.author_wallet in (select followed_wallet from follows where follower_wallet = $2))
-         group by p.id, u.wallet
+         group by p.id, u.wallet, rp.id
        ),
        scored as (
          select
@@ -427,13 +456,138 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     return reply.code(201).send({ id: result.rows[0].id, text: result.rows[0].text, mediaUrl: result.rows[0].media_url, mediaType: result.rows[0].media_type, createdAt: result.rows[0].created_at });
   });
 
+  app.post("/red-packets", async (request, reply) => {
+    const session = getSession(request);
+    if (!session) return reply.unauthorized();
+    if (!config.RED_PACKET_ESCROW_ADDRESS) return reply.serviceUnavailable("red packet escrow is not configured");
+    const body = redPacketSchema.safeParse(request.body);
+    if (!body.success) return reply.badRequest("amount, claimLimit, and a valid expiresAt are required");
+    const expiry = new Date(body.data.expiresAt);
+    if (expiry <= new Date()) return reply.badRequest("expiresAt must be in the future");
+    const result = await pool.query(
+      `insert into red_packets (creator_wallet, escrow_address, total_amount_nim, remaining_amount_nim, claim_limit, expires_at)
+       values ($1, $2, $3, $3, $4, $5) returning id, total_amount_nim::text as amount, claim_limit, expires_at`,
+      [session.wallet, config.RED_PACKET_ESCROW_ADDRESS, body.data.amount, body.data.claimLimit, expiry]
+    );
+    return reply.code(201).send({ ...result.rows[0], escrowAddress: config.RED_PACKET_ESCROW_ADDRESS });
+  });
+
+  app.post("/red-packets/:id/fund", async (request, reply) => {
+    const session = getSession(request);
+    if (!session) return reply.unauthorized();
+    const params = request.params as { id: string };
+    const body = redPacketFundingSchema.safeParse(request.body);
+    if (!body.success) return reply.badRequest("txHash is required");
+    const packet = await pool.query(`select * from red_packets where id = $1 and creator_wallet = $2`, [params.id, session.wallet]);
+    if (packet.rowCount === 0) return reply.notFound("red packet not found");
+    const row = packet.rows[0];
+    if (row.status !== "draft") return reply.badRequest("red packet is already funded or closed");
+    const verified = await verifyBasicTransfer(body.data.txHash, session.wallet, row.escrow_address, row.total_amount_nim);
+    if (!verified) return reply.badRequest("funding transaction could not be verified");
+    const post = await pool.query(
+      `insert into posts (author_wallet, text) values ($1, $2) returning id, text, created_at`,
+      [session.wallet, `Red packet: ${row.total_amount_nim} NIM for ${row.claim_limit} people`]
+    );
+    await pool.query(
+      `update red_packets set status = 'active', funding_tx_hash = $1, post_id = $2 where id = $3`,
+      [body.data.txHash, post.rows[0].id, params.id]
+    );
+    return reply.code(201).send({ packetId: params.id, postId: post.rows[0].id, status: "active" });
+  });
+
+  app.post("/red-packets/:id/claim", async (request, reply) => {
+    const session = getSession(request);
+    if (!session) return reply.unauthorized();
+    const params = request.params as { id: string };
+    const client = await pool.connect();
+    let claimId: string | undefined;
+    let amount: string | undefined;
+    try {
+      await client.query("begin");
+      const result = await client.query(`select * from red_packets where id = $1 for update`, [params.id]);
+      if (result.rowCount === 0) { await client.query("rollback"); return reply.notFound("red packet not found"); }
+      const packet = result.rows[0];
+      if (packet.status !== "active" || new Date(packet.expires_at) <= new Date()) {
+        await client.query(`update red_packets set status = 'expired' where id = $1 and status = 'active'`, [params.id]);
+        await client.query("commit");
+        return reply.badRequest("red packet is expired or closed");
+      }
+      if (Number(packet.claimed_count) >= Number(packet.claim_limit) || Number(packet.remaining_amount_nim) <= 0) {
+        await client.query(`update red_packets set status = 'closed' where id = $1`, [params.id]);
+        await client.query("commit");
+        return reply.badRequest("red packet has no claims remaining");
+      }
+      const existing = await client.query(`select id, amount_nim::text as amount, status from red_packet_claims where packet_id = $1 and wallet = $2`, [params.id, session.wallet]);
+      if (existing.rowCount && existing.rows[0].status !== "failed") { await client.query("rollback"); return reply.conflict("you already claimed this red packet"); }
+      if (existing.rowCount) await client.query(`delete from red_packet_claims where id = $1`, [existing.rows[0].id]);
+      const claimsLeft = Number(packet.claim_limit) - Number(packet.claimed_count);
+      const remainingLunas = nimToLunas(String(packet.remaining_amount_nim));
+      const maxShare = claimsLeft === 1 ? remainingLunas : remainingLunas / BigInt(claimsLeft) * 2n;
+      const shareLunas = claimsLeft === 1 ? remainingLunas : BigInt(randomInt(1, Number(maxShare) + 1));
+      amount = (Number(shareLunas) / 100000).toFixed(5).replace(/0+$/, "").replace(/\.$/, "");
+      const claim = await client.query(
+        `insert into red_packet_claims (packet_id, wallet, amount_nim) values ($1, $2, $3) returning id`,
+        [params.id, session.wallet, amount]
+      );
+      claimId = claim.rows[0].id;
+      const remaining = remainingLunas - shareLunas;
+      const nextStatus = claimsLeft === 1 ? "closed" : "active";
+      await client.query(
+        `update red_packets set remaining_amount_nim = $1, claimed_count = claimed_count + 1, status = $2 where id = $3`,
+        [(Number(remaining) / 100000).toFixed(5), nextStatus, params.id]
+      );
+      await client.query("commit");
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
+    try {
+      const payoutTxHash = await sendEscrowTransfer(session.wallet, amount!);
+      await pool.query(`update red_packet_claims set status = 'paid', payout_tx_hash = $1 where id = $2`, [payoutTxHash, claimId]);
+      const packet = await pool.query(`select remaining_amount_nim::text as "remainingAmount", claimed_count as "claimedCount", status from red_packets where id = $1`, [params.id]);
+      return { status: "paid", amount, payoutTxHash, ...packet.rows[0] };
+    } catch (error) {
+      await pool.query("begin");
+      try {
+        await pool.query(`update red_packet_claims set status = 'failed' where id = $1`, [claimId]);
+        await pool.query(
+          `update red_packets set remaining_amount_nim = remaining_amount_nim + $1, claimed_count = claimed_count - 1, status = 'active' where id = $2`,
+          [amount, params.id]
+        );
+        await pool.query("commit");
+      } catch (rollbackError) {
+        await pool.query("rollback");
+        console.error("Failed to restore red packet after payout failure", rollbackError);
+      }
+      return reply.code(503).send({ error: "payout is temporarily unavailable", claimId });
+    }
+  });
+
+  app.post("/red-packets/:id/refund", async (request, reply) => {
+    const session = getSession(request);
+    if (!session) return reply.unauthorized();
+    const params = request.params as { id: string };
+    const packet = await pool.query(`select * from red_packets where id = $1 and creator_wallet = $2`, [params.id, session.wallet]);
+    if (packet.rowCount === 0) return reply.notFound("red packet not found");
+    const row = packet.rows[0];
+    if (new Date(row.expires_at) > new Date() || Number(row.remaining_amount_nim) <= 0) return reply.badRequest("packet is not refundable yet");
+    const txHash = await sendEscrowTransfer(session.wallet, row.remaining_amount_nim);
+    await pool.query(`update red_packets set remaining_amount_nim = 0, status = 'closed' where id = $1`, [params.id]);
+    return { status: "refunded", txHash };
+  });
+
   app.get("/posts/:id", async (request, reply) => {
     const params = request.params as { id: string };
     const session = getSession(request);
     const viewerWallet = session?.wallet ?? "__anonymous__";
     const result = await pool.query(
       `select p.id, p.text, p.media_url, p.media_type, p.created_at, u.wallet as author_wallet, u.display_name, u.username, u.bio, u.avatar_url,
+              rp.id as red_packet_id, rp.total_amount_nim::text as red_packet_amount, rp.remaining_amount_nim::text as red_packet_remaining,
+              rp.claim_limit as red_packet_claim_limit, rp.claimed_count as red_packet_claimed_count, rp.status as red_packet_status, rp.expires_at as red_packet_expires_at,
               count(distinct l.wallet)::int as like_count, count(distinct c.id)::int as comment_count,
+              count(distinct b.wallet)::int as bookmark_count,
               coalesce(sum(t.amount_nim) filter (where t.status = 'verified'), 0)::text as tip_total,
               count(distinct v.viewer_wallet)::int as view_count,
               exists(select 1 from likes l2 where l2.post_id = p.id and l2.wallet = $2) as liked_by_me,
@@ -441,17 +595,27 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
        from posts p join users u on u.wallet = p.author_wallet
        left join likes l on l.post_id = p.id
        left join comments c on c.post_id = p.id
+      left join bookmarks b on b.post_id = p.id
+      left join red_packets rp on rp.post_id = p.id
        left join tips t on t.post_id = p.id
        left join post_views v on v.post_id = p.id
-       where p.id = $1 group by p.id, u.wallet`,
+      where p.id = $1 group by p.id, u.wallet, rp.id`,
       [params.id, viewerWallet]
     );
     if (result.rowCount === 0) return reply.notFound("post not found");
     const comments = await pool.query(
-      `select c.id, c.text, c.created_at, c.parent_comment_id, c.author_wallet, u.username from comments c join users u on u.wallet = c.author_wallet where c.post_id = $1 order by c.created_at asc`,
-      [params.id]
+      `select c.id, c.text, c.created_at, c.parent_comment_id, c.author_wallet, u.username,
+              count(distinct cl.wallet)::int as like_count,
+              exists(select 1 from comment_likes cl2 where cl2.comment_id = c.id and cl2.wallet = $2) as liked_by_me
+       from comments c
+       join users u on u.wallet = c.author_wallet
+       left join comment_likes cl on cl.comment_id = c.id
+       where c.post_id = $1
+       group by c.id, u.username
+       order by c.created_at asc`,
+      [params.id, viewerWallet]
     );
-    return { ...mapPost(result.rows[0]), comments: comments.rows.map((row: Record<string, any>) => ({ id: row.id, text: row.text, createdAt: row.created_at, parentCommentId: row.parent_comment_id, author: { wallet: row.author_wallet, username: row.username } })) };
+    return { ...mapPost(result.rows[0]), comments: comments.rows.map((row: Record<string, any>) => ({ id: row.id, text: row.text, createdAt: row.created_at, parentCommentId: row.parent_comment_id, likeCount: row.like_count, likedByMe: Boolean(row.liked_by_me), author: { wallet: row.author_wallet, username: row.username } })) };
   });
 
   app.post("/posts/:id/like", async (request, reply) => {
@@ -474,6 +638,25 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       }
     }
     const count = await pool.query(`select count(*)::int as count from likes where post_id = $1`, [params.id]);
+    return { liked, likeCount: count.rows[0].count, likedByMe: liked };
+  });
+
+  app.post("/comments/:id/like", async (request, reply) => {
+    const session = getSession(request);
+    if (!session) return reply.unauthorized();
+    const params = request.params as { id: string };
+    const comment = await pool.query(`select id from comments where id = $1`, [params.id]);
+    if (comment.rowCount === 0) return reply.notFound("comment not found");
+
+    const existing = await pool.query(
+      `delete from comment_likes where comment_id = $1 and wallet = $2 returning comment_id`,
+      [params.id, session.wallet]
+    );
+    const liked = existing.rowCount === 0;
+    if (liked) {
+      await pool.query(`insert into comment_likes (comment_id, wallet) values ($1, $2)`, [params.id, session.wallet]);
+    }
+    const count = await pool.query(`select count(*)::int as count from comment_likes where comment_id = $1`, [params.id]);
     return { liked, likeCount: count.rows[0].count, likedByMe: liked };
   });
 
@@ -525,6 +708,8 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       text: result.rows[0].text,
       createdAt: result.rows[0].created_at,
       parentCommentId: result.rows[0].parent_comment_id,
+      likeCount: 0,
+      likedByMe: false,
       author: {
         wallet: authorRow.wallet,
         displayName: authorRow.display_name,

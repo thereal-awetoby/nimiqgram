@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getFeed, createPost, toggleLike, addComment, getPost, getProfile, recordPostView, getFollowing, bookmarkPost, removeBookmark } from '../lib/api'
+import { getFeed, createPost, toggleLike, addComment, getPost, getProfile, recordPostView, getFollowing, bookmarkPost, removeBookmark, claimRedPacket } from '../lib/api'
 import { uploadMedia, getMediaType } from '../lib/upload'
 import TipModal from '../components/TipModal'
 import Avatar from '../components/Avatar'
@@ -10,6 +10,7 @@ import CommentThread from '../components/CommentThread'
 import VideoPreview from '../components/VideoPreview'
 import { formatPostDate } from '../lib/date'
 import { usePendingTips } from '../hooks/usePendingTips'
+import RedPacketModal from '../components/RedPacketModal'
 
 const MAX_VIDEO_SECONDS = 5 * 60
 const URL_REGEX = /(https?:\/\/[^\s]+)/g
@@ -187,6 +188,7 @@ function Feed() {
   const [error, setError] = useState(null)
   const [commentState, setCommentState] = useState({})
   const [tippingPost, setTippingPost] = useState(null)
+  const [redPacketOpen, setRedPacketOpen] = useState(false)
   const [activeTipId, setActiveTipId] = useState(null)
   const [followingUsers, setFollowingUsers] = useState([])
   const [feedScope, setFeedScope] = useState('all')
@@ -221,6 +223,7 @@ function Feed() {
       const nextPosts = data.posts || []
       setPosts(nextPosts)
       setLikedMap(Object.fromEntries(nextPosts.map((post) => [post.id, Boolean(post.likedByMe)])))
+      setBookmarkedMap(Object.fromEntries(nextPosts.map((post) => [post.id, Boolean(post.bookmarkedByMe)])))
     } catch (err) {
       console.error(err)
       setError(err.message)
@@ -360,8 +363,26 @@ function Feed() {
         await bookmarkPost(postId, token)
       }
       setBookmarkedMap((prev) => ({ ...prev, [postId]: !currentlyBookmarked }))
+      setPosts((prev) => prev.map((post) => post.id === postId
+        ? { ...post, bookmarkCount: Math.max(0, Number(post.bookmarkCount || 0) + (currentlyBookmarked ? -1 : 1)) }
+        : post
+      ))
     } catch (err) {
       console.error(err)
+    }
+  }
+
+  async function handleClaimRedPacket(packetId) {
+    if (!isLoggedIn) return
+    try {
+      const result = await claimRedPacket(token, packetId)
+      setPosts((prev) => prev.map((post) => post.redPacket?.id === packetId
+        ? { ...post, redPacket: { ...post.redPacket, claimedCount: Number(post.redPacket.claimedCount) + 1, remainingAmount: result.remainingAmount ?? post.redPacket.remainingAmount, status: result.remainingAmount === '0' ? 'closed' : post.redPacket.status } }
+        : post
+      ))
+      setError(`You claimed ${result.amount} NIM.`)
+    } catch (err) {
+      setError(err.message)
     }
   }
 
@@ -458,6 +479,14 @@ function Feed() {
                   </svg>
                 </button>
                 <button
+                  onClick={() => setRedPacketOpen(true)}
+                  type="button"
+                  className="tap-scale"
+                  style={{ background: 'transparent', border: '1px solid var(--nav-border)', borderRadius: 'var(--radius-btn)', padding: '6px 10px', color: 'var(--tip-accent)', fontSize: 12, fontWeight: 700 }}
+                >
+                  Red packet
+                </button>
+                <button
                   onClick={handlePost}
                   disabled={posting || (!text.trim() && !mediaFile)}
                   className="tap-scale"
@@ -508,16 +537,21 @@ function Feed() {
             </div>
           </div>
 
-          {followingUsers.length > 0 && (
+          {feedScope === 'following' && followingUsers.length > 0 && (
             <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 10 }}>
               {followingUsers.map((person) => (
-                <div key={person.wallet} style={{ minWidth: 60, textAlign: 'center' }}>
+                <Link
+                  key={person.wallet}
+                  to={`/profile/${encodeURIComponent(person.wallet)}`}
+                  title={`Open ${person.displayName || person.username || person.wallet}'s profile`}
+                  style={{ minWidth: 60, textAlign: 'center', color: 'inherit' }}
+                >
                   <Avatar url={person.avatarUrl} fallback={person.username || person.wallet} size={38} />
                   <div style={{ marginTop: 6, fontSize: 10, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 60 }}>
                     {person.displayName || person.username || person.wallet.slice(0, 8)}
                     {person.username && <span style={{ display: 'block', color: 'var(--accent-color)' }}>@{person.username}</span>}
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}
@@ -565,6 +599,23 @@ function Feed() {
                         <PostMedia url={post.mediaUrl} type={post.mediaType} />
                       </div>
                     )}
+
+                    {post.redPacket && (
+                      <div
+                        onClick={(event) => event.preventDefault()}
+                        style={{ marginTop: 10, padding: 12, border: '1px solid var(--tip-accent)', borderRadius: 12, background: 'rgba(200, 139, 20, 0.08)' }}
+                      >
+                        <strong style={{ color: 'var(--tip-accent)' }}>Red packet</strong>
+                        <div style={{ marginTop: 4, fontSize: 13 }}>{post.redPacket.remainingAmount} NIM remaining for {Math.max(0, Number(post.redPacket.claimLimit) - Number(post.redPacket.claimedCount))} people</div>
+                        <button
+                          onClick={(event) => { event.stopPropagation(); handleClaimRedPacket(post.redPacket.id) }}
+                          disabled={!isLoggedIn || post.redPacket.status !== 'active'}
+                          style={{ marginTop: 8, border: 'none', borderRadius: 20, padding: '7px 14px', background: 'var(--tip-accent)', color: 'var(--bg-color)', fontWeight: 700 }}
+                        >
+                          {post.redPacket.status === 'active' ? 'Claim' : 'Closed'}
+                        </button>
+                      </div>
+                    )}
                   </Link>
 
                   <div
@@ -591,7 +642,7 @@ function Feed() {
                       <EyeIcon /> {post.viewCount ?? 0}
                     </ActionButton>
                     <ActionButton onClick={() => handleBookmark(post.id)} disabled={!isLoggedIn} active={isBookmarked} compact color="var(--accent-color)">
-                      <BookmarkIcon filled={isBookmarked} />
+                      <BookmarkIcon filled={isBookmarked} /> {post.bookmarkCount ?? 0}
                     </ActionButton>
                   </div>
 
@@ -605,6 +656,7 @@ function Feed() {
                         <CommentThread
                           comments={cState.comments}
                           isLoggedIn={isLoggedIn}
+                          token={token}
                           compact
                           onReply={(commentId, text) => submitComment(post.id, commentId, text)}
                         />
@@ -652,6 +704,13 @@ function Feed() {
               setActiveTipId(null)
             }
           }}
+        />
+      )}
+
+      {redPacketOpen && (
+        <RedPacketModal
+          onClose={() => setRedPacketOpen(false)}
+          onCreated={() => { setRedPacketOpen(false); loadFeed() }}
         />
       )}
     </div>
