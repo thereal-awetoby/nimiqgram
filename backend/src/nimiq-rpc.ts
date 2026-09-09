@@ -71,7 +71,7 @@ export async function verifyBasicTransfer(txHash: string, expectedSender: string
       const transaction = isRecord(nested) && Object.keys(nested).length > 0
         ? nested
         : payload.result;
-      const sender = normalizeWallet(transaction.fromAddress ?? transaction.sender ?? transaction.from);
+      const sender = getEffectiveSender(transaction);
       const recipient = normalizeWallet(transaction.toAddress ?? transaction.recipient ?? transaction.to);
       const rawValue = transaction.value ?? transaction.amount;
       const value = typeof rawValue === "string" ? BigInt(rawValue) : typeof rawValue === "number" ? BigInt(Math.trunc(rawValue)) : undefined;
@@ -133,6 +133,25 @@ function normalizeWallet(value: unknown): string | undefined {
   return normalized.toLowerCase();
 }
 
+function getEffectiveSender(transaction: Record<string, unknown>): string | undefined {
+  let sender = normalizeWallet(transaction.fromAddress ?? transaction.sender ?? transaction.from);
+  const fromType = transaction.fromType ?? transaction.senderType;
+  const proof = transaction.proof;
+  if (fromType === 2 && typeof proof === "string") {
+    try {
+      const decodedProof = HashedTimeLockedContract.proofToPlain(Uint8Array.from(Buffer.from(proof, "hex")));
+      if ("creator" in decodedProof && typeof decodedProof.creator === "string") {
+        sender = normalizeWallet(decodedProof.creator);
+      }
+    } catch (error) {
+      console.error("Failed to decode HTLC sender proof for funding verification", {
+        error: error instanceof Error ? error.message : error
+      });
+    }
+  }
+  return sender;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -184,7 +203,7 @@ export async function verifyTipTransaction(input: TipVerificationInput): Promise
     // `transaction.from`, which is always the contract address. Nimiq Pay
     // funds tips via user -> HTLC -> recipient, so decode the proof and use
     // `creator` as the effective sender whenever this path is taken.
-    let effectiveSender = normalizeWallet(transaction.fromAddress ?? transaction.sender ?? transaction.from);
+    let effectiveSender = getEffectiveSender(transaction);
     if (transaction.fromType === 2 && typeof transaction.proof === "string") {
       try {
         const proofBytes = Uint8Array.from(Buffer.from(transaction.proof, "hex"));
