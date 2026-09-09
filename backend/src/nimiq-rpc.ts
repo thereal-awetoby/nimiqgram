@@ -1,5 +1,5 @@
 import { config } from "./config.js";
-import { HashedTimeLockedContract } from "@nimiq/core";
+import { Address, HashedTimeLockedContract, KeyPair, PrivateKey, TransactionBuilder } from "@nimiq/core";
 
 export type TipVerificationInput = {
   txHash: string;
@@ -32,29 +32,64 @@ export function nimToLunas(amountNim: string): bigint {
 }
 
 export async function sendEscrowTransfer(recipient: string, amountNim: string): Promise<string> {
-  if (!config.RED_PACKET_ESCROW_WALLET) throw new Error("Red packet escrow wallet is not configured");
-  const result = await nimiqRpc<string>("sendBasicTransaction", [
-    config.RED_PACKET_ESCROW_WALLET,
-    recipient,
-    Number(nimToLunas(amountNim))
+  if (!config.RED_PACKET_PRIVATE_KEY) throw new Error("Red packet private key is not configured");
+  if (!config.RED_PACKET_ESCROW_ADDRESS) throw new Error("Red packet escrow address is not configured");
+
+  const keyPair = KeyPair.derive(PrivateKey.fromHex(config.RED_PACKET_PRIVATE_KEY));
+  const sender = keyPair.toAddress();
+  const expectedSender = Address.fromUserFriendlyAddress(config.RED_PACKET_ESCROW_ADDRESS);
+  if (!sender.equals(expectedSender)) throw new Error("Red packet private key does not match escrow address");
+
+  const [validityStartHeight, networkId] = await Promise.all([
+    nimiqRpc<number>("getBlockNumber"),
+    nimiqRpc<number>("getNetworkId")
   ]);
-  return result;
+  const transaction = TransactionBuilder.newBasic(
+    sender,
+    Address.fromUserFriendlyAddress(recipient),
+    nimToLunas(amountNim),
+    0n,
+    validityStartHeight,
+    networkId
+  );
+  keyPair.signTransaction(transaction);
+  return nimiqRpc<string>("sendRawTransaction", [transaction.toHex()]);
 }
 
 export async function verifyBasicTransfer(txHash: string, expectedSender: string, expectedRecipient: string, expectedAmountNim: string): Promise<boolean> {
-  const payload = await getTransactionByHash(txHash.trim().replace(/^0x/i, "").toLowerCase());
-  if (payload.error || !payload.result) return false;
-  const nested = payload.result.data ?? payload.result.transaction;
-  const transaction = isRecord(nested) && Object.keys(nested).length > 0
-    ? nested
-    : payload.result;
-  const sender = normalizeWallet(transaction.fromAddress ?? transaction.sender ?? transaction.from);
-  const recipient = normalizeWallet(transaction.toAddress ?? transaction.recipient ?? transaction.to);
-  const rawValue = transaction.value ?? transaction.amount;
-  const value = typeof rawValue === "string" ? BigInt(rawValue) : typeof rawValue === "number" ? BigInt(Math.trunc(rawValue)) : undefined;
-  return sender === normalizeWallet(expectedSender)
-    && recipient === normalizeWallet(expectedRecipient)
-    && value === nimToLunas(expectedAmountNim);
+  const normalizedHash = txHash.trim().replace(/^0x/i, "").toLowerCase();
+  const expectedSenderWallet = normalizeWallet(expectedSender);
+  const expectedRecipientWallet = normalizeWallet(expectedRecipient);
+  const expectedValue = nimToLunas(expectedAmountNim);
+
+  // A wallet can return a transaction before the public RPC index has seen it.
+  // Retry briefly instead of rejecting a valid funding payment immediately.
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const payload = await getTransactionByHash(normalizedHash);
+    if (!payload.error && payload.result) {
+      const nested = payload.result.data ?? payload.result.transaction;
+      const transaction = isRecord(nested) && Object.keys(nested).length > 0
+        ? nested
+        : payload.result;
+      const sender = normalizeWallet(transaction.fromAddress ?? transaction.sender ?? transaction.from);
+      const recipient = normalizeWallet(transaction.toAddress ?? transaction.recipient ?? transaction.to);
+      const rawValue = transaction.value ?? transaction.amount;
+      const value = typeof rawValue === "string" ? BigInt(rawValue) : typeof rawValue === "number" ? BigInt(Math.trunc(rawValue)) : undefined;
+      if (sender === expectedSenderWallet && recipient === expectedRecipientWallet && value === expectedValue) return true;
+      console.warn("Red packet funding transaction did not match", {
+        txHash: normalizedHash,
+        expectedSender: expectedSenderWallet,
+        actualSender: sender,
+        expectedRecipient: expectedRecipientWallet,
+        actualRecipient: recipient,
+        expectedValue: expectedValue.toString(),
+        actualValue: value?.toString()
+      });
+      return false;
+    }
+    if (attempt < 5) await new Promise((resolve) => setTimeout(resolve, 1500));
+  }
+  return false;
 }
 
 async function getTransactionByHash(txHash: string): Promise<RpcResponse> {

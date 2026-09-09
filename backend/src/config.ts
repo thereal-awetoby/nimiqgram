@@ -12,7 +12,7 @@ const configSchema = z.object({
   NIMIQ_NETWORK: z.enum(["testnet", "mainnet"]).default("testnet"),
   NIMIQ_RPC_URL: z.string().url().optional().or(z.literal("")),
   RED_PACKET_ESCROW_ADDRESS: z.string().min(1).optional().or(z.literal("")),
-  RED_PACKET_ESCROW_WALLET: z.string().min(1).optional().or(z.literal(""))
+  RED_PACKET_PRIVATE_KEY: z.string().trim().regex(/^[0-9a-fA-F]{64}$/).optional().or(z.literal(""))
 });
 
 export const config = configSchema.parse({
@@ -24,5 +24,5 @@ export const config = configSchema.parse({
   NIMIQ_NETWORK: process.env.NIMIQ_NETWORK,
   NIMIQ_RPC_URL: process.env.NIMIQ_RPC_URL,
   RED_PACKET_ESCROW_ADDRESS: process.env.RED_PACKET_ESCROW_ADDRESS,
-  RED_PACKET_ESCROW_WALLET: process.env.RED_PACKET_ESCROW_WALLET
+  RED_PACKET_PRIVATE_KEY: process.env.RED_PACKET_PRIVATE_KEY
 });
