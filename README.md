@@ -4,13 +4,16 @@ A social payments backend for a Nimiq-powered frontend. This project exposes a R
 
 ## Overview
 
-This backend is designed to be easy to integrate from a frontend app.
+This project contains a Nimiq-powered social mini-app with a React frontend and a Fastify backend.
 
-- Base API URL: http://localhost:3001
+- Frontend: https://nimiqgram.vercel.app
+- API base (deployed): https://nimsoc.onrender.com/api
+- Local backend API: http://localhost:3001/api
 - API prefix: /api
 - Auth model: wallet-based challenge + signature verification
 - Payment flow: Nimiq wallet signatures and on-chain tip verification
 - Data layer: PostgreSQL
+- Post text supports clickable website links and mentions
 
 ## Tech stack
 
@@ -42,7 +45,13 @@ SESSION_SECRET=replace_with_a_long_random_string
 NODE_ENV=development
 NIMIQ_NETWORK=testnet
 NIMIQ_RPC_URL=https://rpc.nimiqwatch.com
-CORS_ORIGIN=http://localhost:3000
+CORS_ORIGIN=http://localhost:3000,http://localhost:5173,https://nimiqgram.vercel.app
+```
+
+For the frontend, set a Vite env value when needed:
+
+```bash
+VITE_API_BASE=http://localhost:3001/api
 ```
 
 ### 3. Start the backend
@@ -154,6 +163,8 @@ Example post payload with optional Cloudinary media:
 ```
 
 `mediaUrl` and `mediaType` are optional, but must be supplied together. The API stores the Cloudinary URL and MIME type and returns them on every post in the feed and on post details.
+
+Post text also supports plain website URLs such as `https://example.com`, `www.example.com`, and `example.com`, which render as clickable links in the app.
 
 ### Following
 

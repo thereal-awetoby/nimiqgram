@@ -39,8 +39,11 @@ social-miniapp-frontend/
 - Auth: wallet challenge, signed message, backend-issued bearer session.
 - Wallet integration: `@nimiq/mini-app-sdk`; real wallet actions require running inside the Nimiq Pay environment.
 - Blockchain lookup: JSON-RPC `getTransactionByHash`.
-- Frontend API base is hardcoded in `social-miniapp-frontend/src/lib/api.js` as `https://nimsoc.onrender.com/api`.
-- Render deploys only the backend through `render.yaml`; frontend deployment is separate, currently on Vercel.
+- Frontend deployment: https://nimiqgram.vercel.app
+- Backend deployment: https://nimsoc.onrender.com/api
+- Frontend API client resolves `VITE_API_BASE` when present, otherwise falls back to the local backend in development or `/api`/deployed URL in production.
+- Render deploys the backend through `render.yaml`; the frontend is hosted separately on Vercel.
+- Post text rendering supports website URLs and mentions, so plain links like `example.com` are clickable in feed/post/profile views.
 
 ## Local Commands
 
@@ -59,6 +62,12 @@ npm.cmd install
 npm.cmd run dev
 npm.cmd run lint
 npm.cmd run build
+```
+
+Frontend app:
+
+```text
+https://nimiqgram.vercel.app
 ```
 
 Backend health endpoint:
@@ -81,9 +90,15 @@ Backend configuration is validated in `backend/src/config.ts`:
 PORT=3001
 DATABASE_URL=postgresql://...
 SESSION_SECRET=<at least 32 characters>
-CORS_ORIGIN=<frontend origin>
+CORS_ORIGIN=http://localhost:3000,http://localhost:5173,https://nimiqgram.vercel.app
 NIMIQ_NETWORK=testnet|mainnet
 NIMIQ_RPC_URL=<JSON-RPC endpoint>
+```
+
+The frontend can override its API origin with:
+
+```text
+VITE_API_BASE=http://localhost:3001/api
 ```
 
 `NIMIQ_NETWORK` is currently used for configuration/logging but does not select the RPC endpoint automatically. The wallet network and RPC network must match. Do not change testnet to mainnet without confirming the wallet is sending mainnet funds.
