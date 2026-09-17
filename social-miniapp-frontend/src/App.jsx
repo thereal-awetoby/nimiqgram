@@ -179,7 +179,7 @@ function App() {
       >
         <HexWatermark />
 
-        <div
+        <header
           className="glass-surface"
           style={{
             position: 'sticky',
@@ -193,22 +193,19 @@ function App() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div
-              aria-label="Nimiqgram logo"
+            <Link
+              to="/"
+              aria-label="Nimiqgram home"
               style={{
-                width: 34,
-                height: 34,
-                borderRadius: 10,
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                border: '1px solid var(--nav-border)',
-                background: '#fff',
-                overflow: 'hidden',
+                gap: 9,
+                color: 'var(--text-color)',
               }}
             >
-              <HexIcon size={28} />
-            </div>
+              <HexIcon size={36} />
+              <strong style={{ fontSize: 18, letterSpacing: 0 }}>Nimiqgram</strong>
+            </Link>
             <button
               onClick={toggleTheme}
               className="tap-scale"
@@ -230,7 +227,7 @@ function App() {
             </button>
           </div>
           <WalletConnect />
-        </div>
+        </header>
 
         <div style={{ paddingBottom: 90, position: 'relative', zIndex: 1 }}>
           <Routes>
