@@ -124,7 +124,7 @@ export default function BouncingHexagon({ theme = 'light' }) {
           transition: 'transform 0.08s ease-out',
         }}
       >
-        Nimiq Social
+        Nimiqgram
       </div>
     </div>
   )
