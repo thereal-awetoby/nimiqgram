@@ -40,10 +40,10 @@ export async function sendEscrowTransfer(recipient: string, amountNim: string): 
   const expectedSender = Address.fromUserFriendlyAddress(config.RED_PACKET_ESCROW_ADDRESS);
   if (!sender.equals(expectedSender)) throw new Error("Red packet private key does not match escrow address");
 
-  const [validityStartHeight, networkId] = await Promise.all([
-    nimiqRpc<number>("getBlockNumber"),
-    nimiqRpc<number>("getNetworkId")
-  ]);
+  const blockNumber = await nimiqRpc<number | { data?: number }>("getBlockNumber");
+  const validityStartHeight = typeof blockNumber === "number" ? blockNumber : blockNumber.data;
+  if (validityStartHeight === undefined) throw new Error("Nimiq RPC returned an invalid block height");
+  const networkId = config.NIMIQ_NETWORK === "mainnet" ? 24 : 5;
   const transaction = TransactionBuilder.newBasic(
     sender,
     Address.fromUserFriendlyAddress(recipient),

@@ -5,9 +5,15 @@
       <stop offset="1" stop-color="#f39c12"/>
     </linearGradient>
   </defs>
-  <path d="M32 3 58 18v28L32 61 6 46V18L32 3Z" fill="url(#hex)" stroke="#fddc85" stroke-width="1.5"/>
-  <g fill="none" stroke="#fddc85" stroke-width="1.25" opacity=".85">
-    <path d="M32 3v15M32 46v15M6 18l13 7.5M45 38.5 58 46M58 18l-13 7.5M19 38.5 6 46"/>
-    <path d="M32 18 45 25.5v15L32 48l-13-7.5v-15L32 18Z"/>
+  <path d="M32 2 59 17.5v29L32 62 5 46.5v-29L32 2Z" fill="url(#hex)" stroke="#fddc85" stroke-width="1.5"/>
+  <g fill="none" stroke="#fddc85" stroke-width="1.4" opacity=".9">
+    <path d="M32 2v10M32 52v10M5 17.5l8.7 5M55.3 41.5l3.7 2.1M59 17.5l-8.7 5M8.7 41.5 5 43.6"/>
+    <path d="M32 20 42 25.8v11.6L32 43.2l-10-5.8V25.8L32 20Z"/>
+    <path d="M32 4 42 9.8v11.6L32 27.2l-10-5.8V9.8L32 4Z"/>
+    <path d="M32 36.8 42 42.6v11.6L32 60l-10-5.8V42.6L32 36.8Z"/>
+    <path d="M49.3 14 59.3 19.8v11.6l-10 5.8-10-5.8V19.8l10-5.8Z"/>
+    <path d="M49.3 36.8 59.3 42.6v11.6l-10 5.8-10-5.8V42.6l10-5.8Z"/>
+    <path d="M14.7 14 24.7 19.8v11.6l-10 5.8-10-5.8V19.8l10-5.8Z"/>
+    <path d="M14.7 36.8 24.7 42.6v11.6l-10 5.8-10-5.8V42.6l10-5.8Z"/>
   </g>
 </svg>
