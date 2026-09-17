@@ -593,7 +593,7 @@ function Feed() {
               onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') navigate(`/post/${post.id}`) }}
               role="link"
               tabIndex={0}
-              style={{ padding: `14px ${PAGE_PADDING}px`, borderBottom: '1px solid var(--nav-border)', cursor: 'pointer' }}
+              style={{ padding: `14px ${PAGE_PADDING}px`, borderBottom: '1px solid var(--nav-border)', cursor: 'pointer', maxWidth: 700, margin: '0 auto' }}
             >
               <div style={{ display: 'flex', gap: 10 }}>
                 <Link onClick={(event) => event.stopPropagation()} to={`/profile/${encodeURIComponent(post.author?.wallet || '')}`} aria-label={`Open ${post.author?.displayName || post.author?.username || 'profile'}`} style={{ height: 40 }}>
@@ -609,7 +609,7 @@ function Feed() {
                     to={`/post/${post.id}`}
                     style={{ display: 'block', color: 'inherit', padding: '8px 6px 12px', margin: '0 -6px' }}
                   >
-                    <p style={{ margin: '4px 0 7px', fontSize: 15, lineHeight: 1.4 }}>
+                    <p style={{ margin: '4px 0 7px', fontSize: 15, lineHeight: 1.55, maxWidth: 620, textAlign: 'left' }}>
                       {renderTextWithLinks(post.text || '')}
                     </p>
 

@@ -169,7 +169,7 @@ function App() {
     <BrowserRouter>
       <div
         style={{
-          maxWidth: 560,
+          maxWidth: 720,
           margin: '0 auto',
           minHeight: '100vh',
           borderLeft: '1px solid var(--nav-border)',
@@ -203,7 +203,21 @@ function App() {
                 color: 'var(--text-color)',
               }}
             >
-              <HexIcon size={36} />
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 8,
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--nav-border)',
+                  overflow: 'hidden',
+                }}
+              >
+                <HexIcon size={22} />
+              </div>
               <strong style={{ fontSize: 18, letterSpacing: 0 }}>Nimiqgram</strong>
             </Link>
             <button

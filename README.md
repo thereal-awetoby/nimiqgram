@@ -23,6 +23,22 @@ This project contains a Nimiq-powered social mini-app with a React frontend and 
 - Nimiq RPC + wallet signature verification
 - Zod validation
 
+## Session context
+
+This repository currently powers a Nimiq social mini-app branded as Nimiqgram, with a lightweight React frontend and a wallet-authenticated social feed.
+
+Current app context:
+
+- Product name: Nimiqgram
+- Frontend shell: Vite + React app in `social-miniapp-frontend/`
+- App branding: the header uses the honeycomb/hexagon mark as the site icon before the Nimiqgram wordmark
+- Feed/profile layout: content is intentionally constrained to a narrower, left-aligned reading column for a cleaner Microsoft-style reading flow
+- Bio and post text: URLs render as clickable links, and profile bios now support the same link conversion as feed text
+- User actions: profile cards keep the like and bookmark accent states visible when the current user has already acted on a post
+- Local app URL: http://localhost:5173
+
+This context reflects the current frontend iteration and is useful for future contributors working on branding, layout, or profile UX.
+
 ## Local setup
 
 ### 1. Install dependencies

@@ -129,6 +129,9 @@ function Profile() {
   }
 
   function ProfilePost({ post }) {
+    const isLiked = Boolean(post.likedByMe)
+    const isBookmarked = Boolean(post.bookmarkedByMe)
+
     return (
       <Link to={`/post/${post.id}`} style={{ display: 'block', color: 'inherit', padding: '10px 0', borderBottom: '1px solid var(--nav-border)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'baseline' }}>
@@ -146,9 +149,9 @@ function Profile() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: 9, gap: 2, fontSize: 12.5, fontWeight: 600 }}>
           <span title="Comments" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: 'var(--comment-accent)' }}><CommentIcon /> {post.commentCount ?? 0}</span>
           <span title="Tips" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: 'var(--tip-accent)' }}><span style={{ display: 'inline-flex', flexShrink: 0 }}><TipIcon /></span><span style={{ whiteSpace: 'nowrap' }}>{formatNimAmount(post.tipTotal)}</span></span>
-          <span title="Likes" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: 'var(--like-accent)' }}><HeartIcon /> {post.likeCount ?? 0}</span>
+          <span title="Likes" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: isLiked ? 'var(--like-accent)' : 'var(--text-muted)', opacity: isLiked ? 1 : 0.8 }}><HeartIcon /> {post.likeCount ?? 0}</span>
           <span title="Views" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: 'var(--view-accent)' }}><EyeIcon /> {post.viewCount ?? 0}</span>
-          <span title="Bookmarks" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: 'var(--accent-color)' }}><BookmarkIcon /> {post.bookmarkCount ?? 0}</span>
+          <span title="Bookmarks" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: isBookmarked ? 'var(--accent-color)' : 'var(--text-muted)', opacity: isBookmarked ? 1 : 0.8 }}><BookmarkIcon /> {post.bookmarkCount ?? 0}</span>
         </div>
       </Link>
     )
@@ -301,7 +304,7 @@ function Profile() {
   }
 
   return (
-    <div style={{ width: '100%', maxWidth: 760, margin: 0, padding: 0, textAlign: 'left' }}>
+    <div style={{ width: '100%', maxWidth: 720, margin: 0, padding: 0, textAlign: 'left' }}>
       {mode === 'view' ? (
         <>
           <div
@@ -345,8 +348,12 @@ function Profile() {
           </div>
 
           <div style={{ padding: '16px 16px 0' }}>
-            {bio && <p style={{ color: 'var(--text-muted)', fontSize: 14, lineHeight: 1.5, margin: '0 0 12px' }}>{bio}</p>}
-            {!bio && isOwnProfile && <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: '0 0 12px' }}>Add a bio to tell people a little about you.</p>}
+            {bio && (
+              <p style={{ color: 'var(--text-muted)', fontSize: 14, lineHeight: 1.6, maxWidth: 620, margin: '0 0 12px', whiteSpace: 'pre-wrap' }}>
+                {renderTextWithLinks(bio)}
+              </p>
+            )}
+            {!bio && isOwnProfile && <p style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: 1.6, maxWidth: 620, margin: '0 0 12px' }}>Add a bio to tell people a little about you.</p>}
 
              <div style={{ display: 'flex', gap: 8, marginTop: bio || isOwnProfile ? 0 : 12, justifyContent: 'center' }}>
               {['followers', 'following'].map((tab) => {
