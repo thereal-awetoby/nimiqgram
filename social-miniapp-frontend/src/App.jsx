@@ -7,7 +7,7 @@ import Notifications from './pages/Notifications'
 import Search from './pages/Search'
 import Post from './pages/Post'
 import WalletConnect from './components/WalletConnect'
-import BouncingHexagon, { HexIcon } from './BouncingHexagon'
+import BouncingHexagon from './BouncingHexagon'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Feed', icon: 'home' },
@@ -193,33 +193,6 @@ function App() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Link
-              to="/"
-              aria-label="Nimiqgram home"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 9,
-                color: 'var(--text-color)',
-              }}
-            >
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: 8,
-                  background: 'var(--bg-elevated)',
-                  border: '1px solid var(--nav-border)',
-                  overflow: 'hidden',
-                }}
-              >
-                <HexIcon size={22} />
-              </div>
-              <strong style={{ fontSize: 18, letterSpacing: 0 }}>Nimiqgram</strong>
-            </Link>
             <button
               onClick={toggleTheme}
               className="tap-scale"

@@ -1,9 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#fffdf8"/>
-  <g fill="#f2b705" stroke="#f8d35b" stroke-width="1.5">
-    <path d="M32 4 45 11.5v15L32 34l-13-7.5v-15L32 4Z"/>
-    <path d="M19 26 32 33.5v15L19 56l-13-7.5v-15L19 26Z"/>
-    <path d="M45 26 58 33.5v15L45 56l-13-7.5v-15L45 26Z"/>
-    <path d="M32 26 45 33.5v15L32 56l-13-7.5v-15L32 26Z"/>
+  <defs>
+    <linearGradient id="hex" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fbc02d"/>
+      <stop offset="1" stop-color="#f39c12"/>
+    </linearGradient>
+  </defs>
+  <path d="M32 3 58 18v28L32 61 6 46V18L32 3Z" fill="url(#hex)" stroke="#fddc85" stroke-width="1.5"/>
+  <g fill="none" stroke="#fddc85" stroke-width="1.25" opacity=".85">
+    <path d="M32 3v15M32 46v15M6 18l13 7.5M45 38.5 58 46M58 18l-13 7.5M19 38.5 6 46"/>
+    <path d="M32 18 45 25.5v15L32 48l-13-7.5v-15L32 18Z"/>
   </g>
 </svg>

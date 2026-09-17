@@ -20,3 +20,7 @@ services:
         value: testnet
       - key: NIMIQ_RPC_URL
         value: https://rpc.nimiqwatch.com
+      - key: RED_PACKET_ESCROW_ADDRESS
+        sync: false
+      - key: RED_PACKET_PRIVATE_KEY
+        sync: false

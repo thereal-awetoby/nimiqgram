@@ -35,6 +35,42 @@ function getSession(request: { headers: { authorization?: string } }): { wallet:
   return verifySession(authorization.slice(7));
 }
 
+export async function refundExpiredRedPackets(): Promise<void> {
+  while (true) {
+    const result = await pool.query(
+      `with candidate as (
+         select id from red_packets
+         where status in ('active', 'expired') and expires_at <= now() and remaining_amount_nim > 0
+         order by expires_at
+         for update skip locked
+         limit 1
+       )
+       update red_packets packet
+       set status = 'refunding'
+       from candidate
+       where packet.id = candidate.id
+       returning packet.id, packet.creator_wallet, packet.remaining_amount_nim::text as remaining_amount_nim`
+    );
+    const packet = result.rows[0];
+    if (!packet) return;
+
+    try {
+      const txHash = await sendEscrowTransfer(packet.creator_wallet, packet.remaining_amount_nim);
+      await pool.query(
+        `update red_packets set remaining_amount_nim = 0, status = 'closed' where id = $1`,
+        [packet.id]
+      );
+      console.info("Automatically refunded expired red packet", { packetId: packet.id, txHash });
+    } catch (error) {
+      console.error("Failed to automatically refund expired red packet", {
+        packetId: packet.id,
+        error: error instanceof Error ? error.message : error
+      });
+      await pool.query(`update red_packets set status = 'expired' where id = $1 and status = 'refunding'`, [packet.id]);
+    }
+  }
+}
+
 function mapPost(row: Record<string, any>) {
   return {
     id: row.id,
@@ -596,13 +632,24 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     const session = getSession(request);
     if (!session) return reply.unauthorized();
     const params = request.params as { id: string };
-    const packet = await pool.query(`select * from red_packets where id = $1 and creator_wallet = $2`, [params.id, session.wallet]);
+    const packet = await pool.query(
+      `update red_packets
+       set status = 'refunding'
+       where id = $1 and creator_wallet = $2 and status in ('active', 'expired')
+         and expires_at <= now() and remaining_amount_nim > 0
+       returning *`,
+      [params.id, session.wallet]
+    );
     if (packet.rowCount === 0) return reply.notFound("red packet not found");
     const row = packet.rows[0];
-    if (new Date(row.expires_at) > new Date() || Number(row.remaining_amount_nim) <= 0) return reply.badRequest("packet is not refundable yet");
-    const txHash = await sendEscrowTransfer(session.wallet, row.remaining_amount_nim);
-    await pool.query(`update red_packets set remaining_amount_nim = 0, status = 'closed' where id = $1`, [params.id]);
-    return { status: "refunded", txHash };
+    try {
+      const txHash = await sendEscrowTransfer(session.wallet, row.remaining_amount_nim);
+      await pool.query(`update red_packets set remaining_amount_nim = 0, status = 'closed' where id = $1`, [params.id]);
+      return { status: "refunded", txHash };
+    } catch (error) {
+      await pool.query(`update red_packets set status = 'expired' where id = $1 and status = 'refunding'`, [params.id]);
+      throw error;
+    }
   });
 
   app.get("/posts/:id", async (request, reply) => {
