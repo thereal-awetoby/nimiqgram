@@ -8,7 +8,7 @@ import Search from './pages/Search'
 import Post from './pages/Post'
 import WalletConnect from './components/WalletConnect'
 import BouncingHexagon from './BouncingHexagon'
-import whatsappLogo from './assets/whatsapp-logo.jpeg'
+const appLogo = '/app-logo.svg'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Feed', icon: 'home' },
@@ -195,7 +195,7 @@ function App() {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <img
-              src={whatsappLogo}
+              src={appLogo}
               alt="Nimiqgram logo"
               style={{
                 width: 34,

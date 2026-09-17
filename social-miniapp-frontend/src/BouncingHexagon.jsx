@@ -5,17 +5,6 @@ const EDGE_COLOR = '#f9d36d'
 const SHADOW_LIGHT = '#b9b3a1'
 const SHADOW_DARK = '#5a574d'
 
-function hexPoints(cx, cy, radius) {
-  const points = []
-  for (let i = 0; i < 6; i += 1) {
-    const angle = (Math.PI / 180) * (60 * i - 30)
-    const x = cx + radius * Math.cos(angle)
-    const y = cy + radius * Math.sin(angle)
-    points.push(`${x},${y}`)
-  }
-  return points.join(' ')
-}
-
 export default function BouncingHexagon({ theme = 'light' }) {
   const hexRef = useRef(null)
   const shadowRef = useRef(null)
@@ -27,16 +16,6 @@ export default function BouncingHexagon({ theme = 'light' }) {
   const textColor = isDark ? '#f3f3f3' : '#1d1d1f'
 
   const outerHex = '120,40 280,40 360,150 280,260 120,260 40,150'
-  const cells = [
-    { cx: 110, cy: 90, r: 38 },
-    { cx: 200, cy: 90, r: 38 },
-    { cx: 290, cy: 90, r: 38 },
-    { cx: 155, cy: 150, r: 38 },
-    { cx: 245, cy: 150, r: 38 },
-    { cx: 110, cy: 210, r: 38 },
-    { cx: 200, cy: 210, r: 38 },
-    { cx: 290, cy: 210, r: 38 },
-  ]
 
   useEffect(() => {
     const animationDuration = 4000
@@ -129,28 +108,9 @@ export default function BouncingHexagon({ theme = 'light' }) {
       >
         <ellipse ref={shadowRef} cx={340} cy={222} rx={34} ry={7} fill={shadowColor} opacity={0.35} />
         <g ref={hexRef}>
-          <defs>
-            <clipPath id="logoOuterHex">
-              <polygon points={outerHex} />
-            </clipPath>
-          </defs>
-
-          <g clipPath="url(#logoOuterHex)">
-            {cells.map(({ cx, cy, r }, i) => (
-              <polygon
-                key={i}
-                points={hexPoints(cx, cy, r)}
-                fill={HEX_COLOR}
-                stroke={EDGE_COLOR}
-                strokeWidth={2}
-                strokeLinejoin="round"
-              />
-            ))}
-          </g>
-
           <polygon
             points={outerHex}
-            fill="none"
+            fill={HEX_COLOR}
             stroke={EDGE_COLOR}
             strokeWidth={2}
             strokeLinejoin="round"
