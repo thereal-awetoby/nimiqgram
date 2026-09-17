@@ -20,12 +20,19 @@ export function buildServer() {
 
 const app = buildServer();
 
-const refundInterval = setInterval(() => {
-  void refundExpiredRedPackets().catch((error) => {
-    app.log.error(error, "Expired red-packet refund worker failed");
-  });
-}, 60_000);
-refundInterval.unref();
+if (config.RED_PACKET_PRIVATE_KEY && config.RED_PACKET_ESCROW_ADDRESS) {
+  const refundInterval = setInterval(() => {
+    void refundExpiredRedPackets().catch((error) => {
+      app.log.error(error, "Expired red-packet refund worker failed");
+    });
+  }, 60_000);
+  refundInterval.unref();
+} else {
+  app.log.warn({
+    escrowAddressConfigured: Boolean(config.RED_PACKET_ESCROW_ADDRESS),
+    privateKeyConfigured: Boolean(config.RED_PACKET_PRIVATE_KEY)
+  }, "Red-packet payouts and refunds are disabled until both secrets are configured");
+}
 
 try {
   await app.listen({ port: config.PORT, host: "0.0.0.0" });

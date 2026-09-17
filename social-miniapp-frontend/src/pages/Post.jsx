@@ -231,7 +231,7 @@ function Post() {
     if (!isLoggedIn || !post?.redPacket) return
     try {
       const result = await claimRedPacket(token, post.redPacket.id)
-      setPost((current) => current ? { ...current, redPacket: { ...current.redPacket, remainingAmount: result.remainingAmount, claimedCount: result.claimedCount, status: result.status } } : current)
+      setPost((current) => current ? { ...current, redPacket: { ...current.redPacket, claimedByMe: true, remainingAmount: result.remainingAmount, claimedCount: result.claimedCount, status: result.status } } : current)
       setClaimMessage(`You claimed ${result.amount} NIM.`)
       setClaimConfirmationOpen(false)
     } catch (err) {
@@ -266,8 +266,8 @@ function Post() {
           <div style={{ marginTop: 12, padding: 12, border: '1px solid var(--tip-accent)', borderRadius: 12, background: 'rgba(200, 139, 20, 0.08)' }}>
             <strong style={{ color: 'var(--tip-accent)' }}>Red packet</strong>
             <div style={{ marginTop: 4, fontSize: 13 }}>{post.redPacket.remainingAmount} NIM remaining for {Math.max(0, Number(post.redPacket.claimLimit) - Number(post.redPacket.claimedCount))} people</div>
-            <button onClick={() => setClaimConfirmationOpen(true)} disabled={!isLoggedIn || post.redPacket.status !== 'active'} style={{ marginTop: 8, border: 'none', borderRadius: 20, padding: '7px 14px', background: 'var(--tip-accent)', color: 'var(--bg-color)', fontWeight: 700 }}>
-              {post.redPacket.status === 'active' ? 'Claim' : 'Closed'}
+            <button onClick={() => setClaimConfirmationOpen(true)} disabled={!isLoggedIn || post.redPacket.claimedByMe || post.redPacket.status !== 'active'} style={{ marginTop: 8, border: 'none', borderRadius: 20, padding: '7px 14px', background: 'var(--tip-accent)', color: 'var(--bg-color)', fontWeight: 700 }}>
+              {post.redPacket.claimedByMe ? 'Claimed' : post.redPacket.status === 'active' ? 'Claim' : 'Closed'}
             </button>
             {claimConfirmationOpen && (
               <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>

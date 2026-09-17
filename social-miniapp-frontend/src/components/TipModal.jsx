@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import initCore, { Transaction } from '@nimiq/core/web'
 import { useAuth } from '../context/AuthContext'
 import { sendTip } from '../lib/api'
@@ -100,15 +100,7 @@ function TipModal({ post, onClose, onSuccess, onPending, verificationStatus }) {
   const [amount, setAmount] = useState('1')
   const [status, setStatus] = useState('idle') // idle | sending | pending | success | error
   const [error, setError] = useState(null)
-
-  // Reflects the parent's independent polling (usePendingTips) back into the
-  // modal's own UI, in case the user keeps it open. If they close it, this
-  // component unmounts and simply stops listening — the parent keeps polling.
-  useEffect(() => {
-    if (verificationStatus === 'verified' && status === 'pending') {
-      setStatus('success')
-    }
-  }, [verificationStatus, status])
+  const visibleStatus = verificationStatus === 'verified' && status === 'pending' ? 'success' : status
 
   async function handleSendTip() {
     setStatus('sending')
@@ -132,17 +124,12 @@ function TipModal({ post, onClose, onSuccess, onPending, verificationStatus }) {
         throw new Error('This tip was sent from a different Nimiq Pay account than the one you\'re logged in with. Switch to your logged-in account in Nimiq Pay and try again.')
       }
 
-      let result
-      try {
-        result = await sendTip(token, {
-          toWallet: post.author?.wallet,
-          postId: post.id,
-          amount: Number(amount),
-          txHash,
-        })
-      } catch (err) {
-        throw new Error(err.message)
-      }
+      const result = await sendTip(token, {
+        toWallet: post.author?.wallet,
+        postId: post.id,
+        amount: Number(amount),
+        txHash,
+      })
 
       if (result?.status === 'verified') {
         setStatus('success')
@@ -183,12 +170,12 @@ function TipModal({ post, onClose, onSuccess, onPending, verificationStatus }) {
       >
         <h3>Tip {post.author?.username || post.author?.wallet}</h3>
 
-        {status === 'success' || status === 'pending' ? (
+        {visibleStatus === 'success' || visibleStatus === 'pending' ? (
           <>
-            <p style={{ color: status === 'pending' ? 'var(--accent-color)' : 'green' }}>
-              {status === 'pending' ? 'Tip broadcast successfully. Waiting for blockchain confirmation.' : 'Tip confirmed on-chain.'}
+            <p style={{ color: visibleStatus === 'pending' ? 'var(--accent-color)' : 'green' }}>
+              {visibleStatus === 'pending' ? 'Tip broadcast successfully. Waiting for blockchain confirmation.' : 'Tip confirmed on-chain.'}
             </p>
-            {status === 'pending' && (
+            {visibleStatus === 'pending' && (
               <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>
                 Your wallet has already sent the transaction. We are waiting for the network to confirm it before marking it as complete.
               </p>

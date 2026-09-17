@@ -6,6 +6,33 @@ const API_BASE = (() => {
   return isLocalHost ? 'http://localhost:3001/api' : 'https://nimsoc.onrender.com/api'
 })()
 
+function formatErrorMessage(status, responseText) {
+  let payload
+  try {
+    payload = JSON.parse(responseText)
+  } catch {
+    payload = null
+  }
+
+  const message = payload?.error ?? payload?.message
+  if (typeof message === 'string' && message.trim()) return message.trim()
+
+  if (message && typeof message === 'object') {
+    const fieldErrors = Object.entries(message.fieldErrors || {})
+      .flatMap(([field, errors]) => (Array.isArray(errors) ? errors.map((error) => `${field}: ${error}`) : []))
+    const formErrors = Array.isArray(message.formErrors) ? message.formErrors : []
+    const details = [...fieldErrors, ...formErrors].filter(Boolean)
+    if (details.length) return details.join('. ')
+  }
+
+  if (status === 503) return 'The payment service is temporarily unavailable. Please try again.'
+  if (status === 401) return 'Your session has expired. Please connect your wallet again.'
+  if (status === 403) return 'You are not allowed to perform this action.'
+  if (status === 404) return 'The requested item could not be found.'
+  if (status >= 500) return 'The server could not complete your request. Please try again.'
+  return 'Please check your information and try again.'
+}
+
 async function request(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
@@ -17,7 +44,7 @@ async function request(path, options = {}) {
 
   if (!res.ok) {
     const errText = await res.text().catch(() => '')
-    throw new Error(`API error ${res.status}: ${errText}`)
+    throw new Error(formatErrorMessage(res.status, errText))
   }
 
   return res.json()

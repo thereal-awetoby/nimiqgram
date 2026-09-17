@@ -13,6 +13,7 @@ export function usePendingTips(token, wallet, onVerified) {
   const metaByIdRef = useRef(new Map())
   const attemptsByIdRef = useRef(new Map())
   const timersByIdRef = useRef(new Map())
+  const pollRef = useRef(null)
 
   const stopTracking = useCallback((tipId) => {
     const timer = timersByIdRef.current.get(tipId)
@@ -50,9 +51,13 @@ export function usePendingTips(token, wallet, onVerified) {
       return
     }
 
-    const timer = window.setTimeout(() => poll(tipId), POLL_INTERVAL_MS)
+    const timer = window.setTimeout(() => pollRef.current?.(tipId), POLL_INTERVAL_MS)
     timersByIdRef.current.set(tipId, timer)
   }, [onVerified, stopTracking, token])
+
+  useEffect(() => {
+    pollRef.current = poll
+  }, [poll])
 
   // meta (e.g. { postId, amount }) is stashed here rather than trusted from
   // the eventual verifyTip response, so callers don't depend on the backend
@@ -61,9 +66,9 @@ export function usePendingTips(token, wallet, onVerified) {
     if (!tipId || timersByIdRef.current.has(tipId)) return
     metaByIdRef.current.set(tipId, meta)
     setStatusById((prev) => ({ ...prev, [tipId]: 'pending' }))
-    const timer = window.setTimeout(() => poll(tipId), POLL_INTERVAL_MS)
+    const timer = window.setTimeout(() => pollRef.current?.(tipId), POLL_INTERVAL_MS)
     timersByIdRef.current.set(tipId, timer)
-  }, [poll])
+  }, [])
 
   useEffect(() => {
     if (!token || !wallet) return undefined
@@ -82,9 +87,10 @@ export function usePendingTips(token, wallet, onVerified) {
   }, [token, wallet, trackTip])
 
   useEffect(() => {
+    const timers = timersByIdRef.current
     return () => {
-      timersByIdRef.current.forEach((timer) => window.clearTimeout(timer))
-      timersByIdRef.current.clear()
+      timers.forEach((timer) => window.clearTimeout(timer))
+      timers.clear()
     }
   }, [])
 

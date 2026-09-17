@@ -134,9 +134,15 @@ function Profile() {
 
     return (
       <Link to={`/post/${post.id}`} style={{ display: 'block', color: 'inherit', padding: '10px 0', borderBottom: '1px solid var(--nav-border)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'baseline' }}>
-          <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>{post.author?.displayName || post.author?.username || post.author?.wallet}</div>
-          {formatPostDate(post.createdAt) && <time dateTime={post.createdAt} style={{ color: 'var(--text-muted)', fontSize: 11, whiteSpace: 'nowrap' }}>{formatPostDate(post.createdAt)}</time>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Avatar url={post.author?.avatarUrl} fallback={post.author?.username || post.author?.wallet} size={40} />
+          <div style={{ minWidth: 0 }}>
+            <div>
+              <strong style={{ fontSize: 14.5 }}>{post.author?.displayName || post.author?.username || post.author?.wallet}</strong>
+              {post.author?.username && <span style={{ color: 'var(--accent-color)', fontSize: 12, marginLeft: 6 }}>@{post.author.username}</span>}
+            </div>
+            {formatPostDate(post.createdAt) && <time dateTime={post.createdAt} style={{ display: 'block', marginTop: 2, color: 'var(--text-muted)', fontSize: 11.5 }}>{formatPostDate(post.createdAt)}</time>}
+          </div>
         </div>
         <div style={{ fontSize: 14, lineHeight: 1.4, marginTop: 5 }}>{renderTextWithLinks(post.text || '')}</div>
         <ProfilePostMedia post={post} />

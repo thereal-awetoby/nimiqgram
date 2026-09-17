@@ -98,6 +98,7 @@ function mapPost(row: Record<string, any>) {
       remainingAmount: row.red_packet_remaining,
       claimLimit: row.red_packet_claim_limit,
       claimedCount: row.red_packet_claimed_count,
+      claimedByMe: Boolean(row.red_packet_claimed_by_me),
       status: row.red_packet_status,
       expiresAt: row.red_packet_expires_at
     } : null
@@ -419,6 +420,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
            rp.remaining_amount_nim::text as red_packet_remaining,
            rp.claim_limit as red_packet_claim_limit,
            rp.claimed_count as red_packet_claimed_count,
+           exists(select 1 from red_packet_claims rpc where rpc.packet_id = rp.id and rpc.wallet = $2) as red_packet_claimed_by_me,
            rp.status as red_packet_status,
            rp.expires_at as red_packet_expires_at,
            count(distinct l.wallet)::int as like_count,
@@ -547,15 +549,39 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     if (row.status !== "draft") return reply.badRequest("red packet is already funded or closed");
     const verified = await verifyBasicTransfer(body.data.txHash, session.wallet, row.escrow_address, row.total_amount_nim);
     if (!verified) return reply.badRequest("funding transaction could not be verified");
-    const post = await pool.query(
-      `insert into posts (author_wallet, text) values ($1, $2) returning id, text, created_at`,
-      [session.wallet, `Red packet: ${row.total_amount_nim} NIM for ${row.claim_limit} people`]
-    );
-    await pool.query(
-      `update red_packets set status = 'active', funding_tx_hash = $1, post_id = $2 where id = $3`,
-      [body.data.txHash, post.rows[0].id, params.id]
-    );
-    return reply.code(201).send({ packetId: params.id, postId: post.rows[0].id, status: "active" });
+
+    const client = await pool.connect();
+    try {
+      await client.query("begin");
+      const lockedPacket = await client.query(
+        `select * from red_packets where id = $1 and creator_wallet = $2 for update`,
+        [params.id, session.wallet]
+      );
+      if (lockedPacket.rowCount === 0) {
+        await client.query("rollback");
+        return reply.notFound("red packet not found");
+      }
+      if (lockedPacket.rows[0].status !== "draft") {
+        await client.query("rollback");
+        return reply.badRequest("red packet is already funded or closed");
+      }
+      const lockedRow = lockedPacket.rows[0];
+      const post = await client.query(
+        `insert into posts (author_wallet, text) values ($1, $2) returning id`,
+        [session.wallet, `Red packet: ${lockedRow.total_amount_nim} NIM for ${lockedRow.claim_limit} people`]
+      );
+      await client.query(
+        `update red_packets set status = 'active', funding_tx_hash = $1, post_id = $2 where id = $3`,
+        [body.data.txHash, post.rows[0].id, params.id]
+      );
+      await client.query("commit");
+      return reply.code(201).send({ packetId: params.id, postId: post.rows[0].id, status: "active" });
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
   });
 
   app.post("/red-packets/:id/claim", async (request, reply) => {
@@ -594,7 +620,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       );
       claimId = claim.rows[0].id;
       const remaining = remainingLunas - shareLunas;
-      const nextStatus = claimsLeft === 1 ? "closed" : "active";
+      const nextStatus = remaining <= 0n ? "closed" : "active";
       await client.query(
         `update red_packets set remaining_amount_nim = $1, claimed_count = claimed_count + 1, status = $2 where id = $3`,
         [(Number(remaining) / 100000).toFixed(5), nextStatus, params.id]
@@ -624,7 +650,9 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
         await pool.query("rollback");
         console.error("Failed to restore red packet after payout failure", rollbackError);
       }
-      return reply.code(503).send({ error: "payout is temporarily unavailable", claimId });
+      const message = error instanceof Error ? error.message : "payout is temporarily unavailable";
+      console.error("Red packet payout failed", { claimId, error: message });
+      return reply.code(503).send({ error: message, claimId });
     }
   });
 
@@ -659,7 +687,9 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     const result = await pool.query(
       `select p.id, p.text, p.media_url, p.media_type, p.created_at, u.wallet as author_wallet, u.display_name, u.username, u.bio, u.avatar_url,
               rp.id as red_packet_id, rp.total_amount_nim::text as red_packet_amount, rp.remaining_amount_nim::text as red_packet_remaining,
-              rp.claim_limit as red_packet_claim_limit, rp.claimed_count as red_packet_claimed_count, rp.status as red_packet_status, rp.expires_at as red_packet_expires_at,
+              rp.claim_limit as red_packet_claim_limit, rp.claimed_count as red_packet_claimed_count,
+              exists(select 1 from red_packet_claims rpc where rpc.packet_id = rp.id and rpc.wallet = $2) as red_packet_claimed_by_me,
+              rp.status as red_packet_status, rp.expires_at as red_packet_expires_at,
               count(distinct l.wallet)::int as like_count, count(distinct c.id)::int as comment_count,
               count(distinct b.wallet)::int as bookmark_count,
               coalesce(sum(t.amount_nim) filter (where t.status = 'verified'), 0)::text as tip_total,

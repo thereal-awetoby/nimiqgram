@@ -218,6 +218,7 @@ function Feed() {
   const fileInputRef = useRef(null)
   const [myAvatar, setMyAvatar] = useState(null)
   const viewedPostsRef = useRef(new Set())
+  const activeFeedScope = user?.wallet && token ? feedScope : 'all'
 
   // Applies a verified tip's amount to the matching post's tipTotal. Used by
   // usePendingTips, which keeps polling even after TipModal is closed or the
@@ -237,7 +238,7 @@ function Feed() {
   const loadFeed = useCallback(async () => {
     setLoading(true)
     try {
-      const data = await getFeed(undefined, token || undefined, feedScope)
+      const data = await getFeed(undefined, token || undefined, activeFeedScope)
       const nextPosts = data.posts || []
       setPosts(nextPosts)
       setLikedMap(Object.fromEntries(nextPosts.map((post) => [post.id, Boolean(post.likedByMe)])))
@@ -248,32 +249,19 @@ function Feed() {
     } finally {
       setLoading(false)
     }
-  }, [feedScope, token])
+  }, [activeFeedScope, token])
 
   useEffect(() => {
-    if (!user?.wallet) {
-      setFeedScope('all')
-      return
-    }
+    if (!user?.wallet) return
 
     getFollowing(user.wallet)
       .then((data) => setFollowingUsers(data.users || []))
       .catch(() => setFollowingUsers([]))
-
-    if (!token) {
-      setFeedScope('all')
-      return
-    }
-
-    setFeedScope((prev) => (prev === 'following' || prev === 'all' ? prev : 'all'))
   }, [user, token])
 
   useEffect(() => {
-    if (!token && !user) {
-      setFeedScope('all')
-    }
-    loadFeed()
-  }, [feedScope, token])
+    Promise.resolve().then(() => loadFeed())
+  }, [loadFeed])
 
   useEffect(() => {
     if (!isLoggedIn || !posts.length || !token) return
@@ -395,7 +383,7 @@ function Feed() {
     try {
       const result = await claimRedPacket(token, packetId)
       setPosts((prev) => prev.map((post) => post.redPacket?.id === packetId
-        ? { ...post, redPacket: { ...post.redPacket, claimedCount: Number(post.redPacket.claimedCount) + 1, remainingAmount: result.remainingAmount ?? post.redPacket.remainingAmount, status: result.remainingAmount === '0' ? 'closed' : post.redPacket.status } }
+        ? { ...post, redPacket: { ...post.redPacket, claimedByMe: true, claimedCount: Number(result.claimedCount ?? Number(post.redPacket.claimedCount) + 1), remainingAmount: result.remainingAmount ?? post.redPacket.remainingAmount, status: result.status === 'closed' ? 'closed' : post.redPacket.status } }
         : post
       ))
       setError(`You claimed ${result.amount} NIM.`)
@@ -629,10 +617,10 @@ function Feed() {
                         <div style={{ marginTop: 4, fontSize: 13 }}>{post.redPacket.remainingAmount} NIM remaining for {Math.max(0, Number(post.redPacket.claimLimit) - Number(post.redPacket.claimedCount))} people</div>
                         <button
                           onClick={(event) => { event.stopPropagation(); setClaimConfirmationId(post.redPacket.id) }}
-                          disabled={!isLoggedIn || post.redPacket.status !== 'active'}
+                          disabled={!isLoggedIn || post.redPacket.claimedByMe || post.redPacket.status !== 'active'}
                           style={{ marginTop: 8, border: 'none', borderRadius: 20, padding: '7px 14px', background: 'var(--tip-accent)', color: 'var(--bg-color)', fontWeight: 700 }}
                         >
-                          {post.redPacket.status === 'active' ? 'Claim' : 'Closed'}
+                          {post.redPacket.claimedByMe ? 'Claimed' : post.redPacket.status === 'active' ? 'Claim' : 'Closed'}
                         </button>
                         {claimConfirmationId === post.redPacket.id && (
                           <div onClick={(event) => event.stopPropagation()} style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
