@@ -461,7 +461,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
          (select count(*)::int from post_views v where v.post_id = id) as view_count
        from scored
        where created_at >= now() - interval '30 days'
-      order by (case when author_wallet = $2 then 1 else 0 end) desc, feed_score desc, created_at desc
+       order by created_at desc, id desc
        limit 21`,
       [cursor, viewerWallet, scope]
     );

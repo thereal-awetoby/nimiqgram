@@ -8,6 +8,7 @@ import Search from './pages/Search'
 import Post from './pages/Post'
 import WalletConnect from './components/WalletConnect'
 import BouncingHexagon from './BouncingHexagon'
+import whatsappLogo from './assets/whatsapp-logo.jpeg'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Feed', icon: 'home' },
@@ -192,25 +193,40 @@ function App() {
             zIndex: 40,
           }}
         >
-          <button
-            onClick={toggleTheme}
-            className="tap-scale"
-            style={{
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--nav-border)',
-              borderRadius: '50%',
-              width: 36,
-              height: 36,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 15,
-              padding: 0,
-              lineHeight: 1,
-            }}
-          >
-            {theme === 'light' ? '🌙' : '☀️'}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <img
+              src={whatsappLogo}
+              alt="Nimiqgram logo"
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 10,
+                objectFit: 'cover',
+                display: 'block',
+                border: '1px solid var(--nav-border)',
+                background: '#fff',
+              }}
+            />
+            <button
+              onClick={toggleTheme}
+              className="tap-scale"
+              style={{
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--nav-border)',
+                borderRadius: '50%',
+                width: 36,
+                height: 36,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 15,
+                padding: 0,
+                lineHeight: 1,
+              }}
+            >
+              {theme === 'light' ? '🌙' : '☀️'}
+            </button>
+          </div>
           <WalletConnect />
         </div>
 
