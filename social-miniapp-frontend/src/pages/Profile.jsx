@@ -55,6 +55,42 @@ function wait(milliseconds) {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds))
 }
 
+const URL_REGEX = /((?:https?:\/\/|www\.)[^\s]+|(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s]*)?)/gi
+const MENTION_REGEX = /(@[a-zA-Z0-9_]{1,32})/g
+
+function normalizeLink(value) {
+  if (!value) return value
+  const trimmed = value.trim()
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  if (/^www\./i.test(trimmed)) return `https://${trimmed}`
+  return `https://${trimmed}`
+}
+
+function renderTextWithLinks(text) {
+  const parts = text.split(URL_REGEX)
+  return parts.map((part, i) => {
+    const normalizedPart = part.trim()
+    const isLink = /^(?:https?:\/\/|www\.)/i.test(normalizedPart) || /^(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/.*)?$/i.test(normalizedPart)
+
+    if (isLink) {
+      const href = normalizeLink(normalizedPart)
+      return (
+        <a key={i} href={href} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--link-color)', textDecoration: 'underline' }}>
+          {normalizedPart}
+        </a>
+      )
+    }
+
+    return part.split(MENTION_REGEX).map((segment, mentionIndex) =>
+      /^@[a-zA-Z0-9_]{1,32}$/.test(segment) ? (
+        <span key={`${i}-${mentionIndex}`} style={{ color: 'var(--accent-color)', fontWeight: 700 }}>{segment}</span>
+      ) : (
+        <span key={`${i}-${mentionIndex}`}>{segment}</span>
+      )
+    )
+  })
+}
+
 function Profile() {
   const { user, token, isLoggedIn } = useAuth()
   const { wallet: profileWallet } = useParams()
@@ -99,7 +135,7 @@ function Profile() {
           <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>{post.author?.displayName || post.author?.username || post.author?.wallet}</div>
           {formatPostDate(post.createdAt) && <time dateTime={post.createdAt} style={{ color: 'var(--text-muted)', fontSize: 11, whiteSpace: 'nowrap' }}>{formatPostDate(post.createdAt)}</time>}
         </div>
-        <div style={{ fontSize: 14, lineHeight: 1.4, marginTop: 5 }}>{post.text}</div>
+        <div style={{ fontSize: 14, lineHeight: 1.4, marginTop: 5 }}>{renderTextWithLinks(post.text || '')}</div>
         <ProfilePostMedia post={post} />
         {post.redPacket && (
           <div style={{ marginTop: 8, padding: 10, border: '1px solid var(--tip-accent)', borderRadius: 10, background: 'rgba(200, 139, 20, 0.08)' }}>

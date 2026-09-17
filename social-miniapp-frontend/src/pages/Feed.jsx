@@ -14,25 +14,41 @@ import { usePendingTips } from '../hooks/usePendingTips'
 import RedPacketModal from '../components/RedPacketModal'
 
 const MAX_VIDEO_SECONDS = 5 * 60
-const URL_REGEX = /(https?:\/\/[^\s]+)/g
+const URL_REGEX = /((?:https?:\/\/|www\.)[^\s]+|(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s]*)?)/gi
 const MENTION_REGEX = /(@[a-zA-Z0-9_]{1,32})/g
 const PAGE_PADDING = 16
 
+function normalizeLink(value) {
+  if (!value) return value
+  const trimmed = value.trim()
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  if (/^www\./i.test(trimmed)) return `https://${trimmed}`
+  return `https://${trimmed}`
+}
+
 function renderTextWithLinks(text) {
   const parts = text.split(URL_REGEX)
-  return parts.map((part, i) =>
-    /^https?:\/\//.test(part) ? (
-      <a key={i} href={part} target="_blank" rel="noopener noreferrer">{part}</a>
-    ) : (
-      part.split(MENTION_REGEX).map((segment, mentionIndex) =>
-        /^@[a-zA-Z0-9_]{1,32}$/.test(segment) ? (
-          <span key={`${i}-${mentionIndex}`} style={{ color: 'var(--accent-color)', fontWeight: 700 }}>{segment}</span>
-        ) : (
-          <span key={`${i}-${mentionIndex}`}>{segment}</span>
-        )
+  return parts.map((part, i) => {
+    const normalizedPart = part.trim()
+    const isLink = /^(?:https?:\/\/|www\.)/i.test(normalizedPart) || /^(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/.*)?$/i.test(normalizedPart)
+
+    if (isLink) {
+      const href = normalizeLink(normalizedPart)
+      return (
+        <a key={i} href={href} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--link-color)', textDecoration: 'underline' }}>
+          {normalizedPart}
+        </a>
+      )
+    }
+
+    return part.split(MENTION_REGEX).map((segment, mentionIndex) =>
+      /^@[a-zA-Z0-9_]{1,32}$/.test(segment) ? (
+        <span key={`${i}-${mentionIndex}`} style={{ color: 'var(--accent-color)', fontWeight: 700 }}>{segment}</span>
+      ) : (
+        <span key={`${i}-${mentionIndex}`}>{segment}</span>
       )
     )
-  )
+  })
 }
 
 function HeartIcon({ filled }) {
