@@ -1,6 +1,12 @@
 import "dotenv/config";
 import { z } from "zod";
 
+const normalizeCorsOrigins = (value = "http://localhost:3000") =>
+  value
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
 const configSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(3001),
@@ -15,14 +21,18 @@ const configSchema = z.object({
   RED_PACKET_PRIVATE_KEY: z.string().trim().regex(/^[0-9a-fA-F]{64}$/).optional().or(z.literal(""))
 });
 
+const rawCorsOrigins = normalizeCorsOrigins(process.env.CORS_ORIGIN ?? "http://localhost:3000");
+
 export const config = configSchema.parse({
   NODE_ENV: process.env.NODE_ENV,
   PORT: process.env.PORT,
   DATABASE_URL: process.env.DATABASE_URL,
-  CORS_ORIGIN: process.env.CORS_ORIGIN,
+  CORS_ORIGIN: rawCorsOrigins.join(","),
   SESSION_SECRET: process.env.SESSION_SECRET,
   NIMIQ_NETWORK: process.env.NIMIQ_NETWORK,
   NIMIQ_RPC_URL: process.env.NIMIQ_RPC_URL,
   RED_PACKET_ESCROW_ADDRESS: process.env.RED_PACKET_ESCROW_ADDRESS,
   RED_PACKET_PRIVATE_KEY: process.env.RED_PACKET_PRIVATE_KEY
 });
+
+export const allowedCorsOrigins = rawCorsOrigins;

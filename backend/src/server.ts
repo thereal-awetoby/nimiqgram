@@ -1,13 +1,17 @@
 import cors from "@fastify/cors";
 import Fastify from "fastify";
 import sensible from "@fastify/sensible";
-import { config } from "./config.js";
+import { allowedCorsOrigins, config } from "./config.js";
 import { registerRoutes } from "./routes.js";
 
 export function buildServer() {
   const app = Fastify({ logger: true });
 
-  void app.register(cors, { origin: config.CORS_ORIGIN });
+  void app.register(cors, {
+    origin: allowedCorsOrigins,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  });
   void app.register(sensible);
   void app.register(registerRoutes, { prefix: "/api" });
 

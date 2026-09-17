@@ -1,4 +1,10 @@
-const API_BASE = 'https://nimsoc.onrender.com/api'
+const API_BASE = (() => {
+  const configuredBase = (import.meta.env.VITE_API_BASE || '').trim().replace(/\/+$/, '')
+  if (configuredBase) return configuredBase
+
+  const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+  return isLocalHost ? 'http://localhost:3001/api' : 'https://nimsoc.onrender.com/api'
+})()
 
 async function request(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
