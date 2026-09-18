@@ -149,7 +149,7 @@ function App() {
   }, [theme])
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setIsBooting(false), 4000)
+    const timer = window.setTimeout(() => setIsBooting(false), 900)
     return () => window.clearTimeout(timer)
   }, [])
 

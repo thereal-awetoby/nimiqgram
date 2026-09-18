@@ -195,7 +195,7 @@ function PostMedia({ url, type }) {
 
 function Feed() {
   const navigate = useNavigate()
-  const { token, isLoggedIn, user } = useAuth()
+  const { token, isLoggedIn, user, updateUser } = useAuth()
   const [posts, setPosts] = useState([])
   const [likedMap, setLikedMap] = useState({})
   const [bookmarkedMap, setBookmarkedMap] = useState({})
@@ -215,8 +215,7 @@ function Feed() {
   const [mediaPreview, setMediaPreview] = useState(null)
   const [mediaType, setMediaType] = useState(null)
   const [uploading, setUploading] = useState(false)
-  const fileInputRef = useRef(null)
-  const [myAvatar, setMyAvatar] = useState(null)
+    const fileInputRef = useRef(null)
   const viewedPostsRef = useRef(new Set())
   const activeFeedScope = user?.wallet && token ? feedScope : 'all'
 
@@ -275,12 +274,12 @@ function Feed() {
       } catch (err) {
         console.error('Failed to record post view', err)
       }
-    })
+        })
   }, [posts, isLoggedIn, token])
 
   useEffect(() => {
-    if (!user?.wallet) return
-    getProfile(user.wallet).then((p) => setMyAvatar(p.avatarUrl || null)).catch(() => {})
+    if (!user?.wallet || user.avatarUrl !== undefined) return
+    getProfile(user.wallet).then((p) => updateUser({ avatarUrl: p.avatarUrl || null })).catch(() => {})
   }, [user])
 
   function handleFileSelect(e) {
@@ -439,7 +438,7 @@ function Feed() {
       {isLoggedIn ? (
         <div style={{ padding: `14px ${PAGE_PADDING}px 10px`, borderBottom: '1px solid var(--nav-border)' }}>
           <div style={{ display: 'flex', gap: 10 }}>
-            <Avatar url={myAvatar} fallback={user?.username || user?.wallet} />
+            <Avatar url={user?.avatarUrl} fallback={user?.username || user?.wallet} />
             <div style={{ flex: 1 }}>
               <textarea
                 value={text}

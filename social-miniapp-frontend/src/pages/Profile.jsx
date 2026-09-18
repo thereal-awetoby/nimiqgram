@@ -287,7 +287,10 @@ function Profile() {
     setStatus('saving')
     setError(null)
     try {
-      await updateProfile(token, { displayName, username, bio, avatarUrl: avatarUrl.trim() || null, bannerUrl: bannerUrl.trim() || null })
+            await updateProfile(token, { displayName, username, bio, avatarUrl: avatarUrl.trim() || null, bannerUrl: bannerUrl.trim() || null })
+      if (isOwnProfile) {
+        updateUser({ avatarUrl: avatarUrl.trim() || null, displayName: displayName.trim(), username: username.trim() })
+      }
       setStatus('saved')
       setMode('view')
     } catch (err) {

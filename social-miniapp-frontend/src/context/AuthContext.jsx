@@ -29,8 +29,15 @@ export function AuthProvider({ children }) {
     setUser(null)
   }
 
+  // Merges new fields (like a freshly-fetched avatarUrl or username) into the
+  // current user object, so pages can cache profile data in one shared place
+  // instead of each page re-fetching it separately.
+  function updateUser(partial) {
+    setUser((current) => (current ? { ...current, ...partial } : current))
+  }
+
   return (
-    <AuthContext.Provider value={{ token, user, login, logout, isLoggedIn: !!token }}>
+    <AuthContext.Provider value={{ token, user, login, logout, updateUser, isLoggedIn: !!token }}>
       {children}
     </AuthContext.Provider>
   )
