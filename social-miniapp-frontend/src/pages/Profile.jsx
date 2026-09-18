@@ -92,7 +92,7 @@ function renderTextWithLinks(text) {
 }
 
 function Profile() {
-  const { user, token, isLoggedIn } = useAuth()
+  const { user, token, updateUser, isLoggedIn } = useAuth()
   const { wallet: profileWallet } = useParams()
   const targetWallet = profileWallet || user?.wallet
   const isOwnProfile = Boolean(user?.wallet && targetWallet === user.wallet)
