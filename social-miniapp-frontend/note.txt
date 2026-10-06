@@ -155,10 +155,8 @@ This repo is a backend-first project for frontend integration. The API contract 
 
 For the full route and payload details, see docs/api-contract.md.
 
-Submission date : 
-
+Submission date : 18/09/26
 demo video link  :
-Twitter Post : 
-post on skool :
-demo screenshots : 
-logo image :
+Twitter Post : https://x.com/winsoonbob/status/2101005136956908023?s=46
+post on skool : https://www.skool.com/miniappscompetition/nimiqgram-is-live?p=493b24dc
+Link : https://nimiqgramweb.vercel.app/
