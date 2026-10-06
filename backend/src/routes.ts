@@ -521,6 +521,43 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     return reply.code(201).send({ id: result.rows[0].id, text: result.rows[0].text, mediaUrl: result.rows[0].media_url, mediaType: result.rows[0].media_type, createdAt: result.rows[0].created_at });
   });
 
+  app.delete("/posts/:id", async (request, reply) => {
+    const session = getSession(request);
+    if (!session) return reply.unauthorized();
+    const params = request.params as { id: string };
+    const client = await pool.connect();
+
+    try {
+      await client.query("begin");
+      const post = await client.query(
+        `select id from posts where id = $1 and author_wallet = $2 for update`,
+        [params.id, session.wallet]
+      );
+      if (post.rowCount === 0) {
+        await client.query("rollback");
+        return reply.notFound("post not found");
+      }
+
+      const packet = await client.query(
+        `select status from red_packets where post_id = $1 for update`,
+        [params.id]
+      );
+      if (packet.rows.some((row: { status: string }) => row.status === "active")) {
+        await client.query("rollback");
+        return reply.conflict("posts with an active red packet cannot be deleted");
+      }
+
+      await client.query(`delete from posts where id = $1`, [params.id]);
+      await client.query("commit");
+      return { deleted: true };
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
+  });
+
   app.post("/red-packets", async (request, reply) => {
     const session = getSession(request);
     if (!session) return reply.unauthorized();

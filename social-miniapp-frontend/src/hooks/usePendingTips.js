@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { getTipActivity, verifyTip } from '../lib/api'
 
 const POLL_INTERVAL_MS = 3000
-const MAX_ATTEMPTS = 10
+const MAX_ATTEMPTS = 25
 
 // Tracks pending tips independently of any single component's lifecycle.
 // TipModal is expected to be closed by the user while a tip is still
@@ -51,7 +51,10 @@ export function usePendingTips(token, wallet, onVerified) {
       return
     }
 
-    const timer = window.setTimeout(() => pollRef.current?.(tipId), POLL_INTERVAL_MS)
+    const timer = window.setTimeout(
+      () => pollRef.current?.(tipId),
+      Math.min(POLL_INTERVAL_MS * attempts, 15_000)
+    )
     timersByIdRef.current.set(tipId, timer)
   }, [onVerified, stopTracking, token])
 

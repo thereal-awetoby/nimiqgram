@@ -163,10 +163,13 @@ Example body:
 ```http
 GET /api/feed?cursor=
 POST /api/posts
+DELETE /api/posts/:id
 GET /api/posts/:id
 POST /api/posts/:id/like
 POST /api/posts/:id/comment
 ```
+
+Deleting a post requires its author's bearer token. Likes, comments, bookmarks, and post notifications are removed with it; tip records remain in wallet activity. Posts attached to an active red packet cannot be deleted.
 
 Example post payload with optional Cloudinary media:
 

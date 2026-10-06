@@ -177,7 +177,7 @@ function TipModal({ post, onClose, onSuccess, onPending, verificationStatus }) {
             </p>
             {visibleStatus === 'pending' && (
               <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-                Your wallet has already sent the transaction. We are waiting for the network to confirm it before marking it as complete.
+                Your wallet has already sent the transaction. Confirmation can take a little while, especially when the server is waking up. You can check Profile → Activity for its status.
               </p>
             )}
             <button onClick={onClose}>Close</button>

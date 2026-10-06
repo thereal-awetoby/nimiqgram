@@ -435,6 +435,16 @@ function Feed() {
 
   return (
     <div>
+      <section className="feed-hero" aria-labelledby="feed-hero-title">
+        <div>
+          <span className="feed-hero__eyebrow">THE NIMIQ COMMUNITY</span>
+          <h1 id="feed-hero-title">Social, with value.</h1>
+          <p>Share a thought, send a NIM tip, or pass a red packet around—right in the feed.</p>
+          <Link to="/leaderboard" className="feed-hero__link">See community rewards <span aria-hidden="true">→</span></Link>
+        </div>
+        <img src="/app-logo.svg" alt="" aria-hidden="true" />
+      </section>
+
       {isLoggedIn ? (
         <div style={{ padding: `14px ${PAGE_PADDING}px 10px`, borderBottom: '1px solid var(--nav-border)' }}>
           <div style={{ display: 'flex', gap: 10 }}>

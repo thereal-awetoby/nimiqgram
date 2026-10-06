@@ -25,7 +25,7 @@ function formatErrorMessage(status, responseText) {
     if (details.length) return details.join('. ')
   }
 
-  if (status === 503) return 'The payment service is temporarily unavailable. Please try again.'
+  if (status === 503) return 'The server is temporarily unavailable. Please try again.'
   if (status === 401) return 'Your session has expired. Please connect your wallet again.'
   if (status === 403) return 'You are not allowed to perform this action.'
   if (status === 404) return 'The requested item could not be found.'
@@ -33,21 +33,59 @@ function formatErrorMessage(status, responseText) {
   return 'Please check your information and try again.'
 }
 
-async function request(path, options = {}) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    },
-  })
+const RETRYABLE_STATUS_CODES = new Set([502, 503, 504])
+const MAX_REQUEST_ATTEMPTS = 3
+const REQUEST_TIMEOUT_MS = 20_000
 
-  if (!res.ok) {
+function wait(milliseconds) {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds))
+}
+
+async function request(path, options = {}) {
+  const { retryable = (options.method || 'GET').toUpperCase() === 'GET', ...requestOptions } = options
+  const attempts = retryable ? MAX_REQUEST_ATTEMPTS : 1
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    let res
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+    try {
+      res = await fetch(`${API_BASE}${path}`, {
+        ...requestOptions,
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(requestOptions.headers || {}),
+        },
+      })
+    } catch (error) {
+      if (attempt < attempts && (error instanceof TypeError || error?.name === 'AbortError')) {
+        await wait(1000 * attempt)
+        continue
+      }
+      if (error instanceof TypeError || error?.name === 'AbortError') {
+        throw new Error("Can't reach Nimiqgram's server. Check your connection and try again.", { cause: error })
+      }
+      throw error
+    } finally {
+      window.clearTimeout(timeout)
+    }
+
+    if (res.ok) return res.json()
+
     const errText = await res.text().catch(() => '')
+    if (attempt < attempts && RETRYABLE_STATUS_CODES.has(res.status)) {
+      await wait(1000 * attempt)
+      continue
+    }
     throw new Error(formatErrorMessage(res.status, errText))
   }
 
-  return res.json()
+  throw new Error("Can't reach Nimiqgram's server. Check your connection and try again.")
+}
+
+export function getServerHealth() {
+  return request('/health')
 }
 
 export function getChallenge(wallet) {
@@ -110,11 +148,15 @@ export function getFollowStatus(wallet, token) {
 }
 
 export function followUser(wallet, token) {
-  return authedRequest(`/users/${wallet}/follow`, token, { method: 'POST', body: JSON.stringify({}) })
+  return authedRequest(`/users/${wallet}/follow`, token, { method: 'POST', body: JSON.stringify({}), retryable: true })
 }
 
 export function unfollowUser(wallet, token) {
-  return authedRequest(`/users/${wallet}/follow`, token, { method: 'DELETE' })
+  return authedRequest(`/users/${wallet}/follow`, token, { method: 'DELETE', retryable: true })
+}
+
+export function deletePost(postId, token) {
+  return authedRequest(`/posts/${postId}`, token, { method: 'DELETE' })
 }
 
 export function createPost(token, { text, mediaUrl, mediaType }) {
@@ -188,6 +230,7 @@ export function verifyTip(token, tipId) {
   return authedRequest(`/tips/${tipId}/verify`, token, {
     method: 'POST',
     body: JSON.stringify({}),
+    retryable: true,
   })
 }
 

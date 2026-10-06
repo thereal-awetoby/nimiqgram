@@ -1,9 +1,9 @@
 :root {
-  --bg-color: #ffffff;
-  --bg-elevated: #f5f5f5;
-  --text-color: #111111;
-  --text-muted: #666666;
-  --nav-border: #e2e2e2;
+  --bg-color: #fffdf8;
+  --bg-elevated: #f6f1e7;
+  --text-color: #25231f;
+  --text-muted: #716b60;
+  --nav-border: #e8dfcf;
   --accent-color: #b8790e;
   --link-color: #b8790e;
   --comment-accent: #b8790e;
@@ -21,19 +21,19 @@
 }
 
 [data-theme='dark'] {
-  --bg-color: #000000;
-  --bg-elevated: #161616;
-  --text-color: #f2f2f2;
-  --text-muted: #999999;
-  --nav-border: #262626;
-  --accent-color: #f2a93b;
-  --link-color: #f2a93b;
-  --comment-accent: #f2a93b;
-  --tip-accent: #f0b14b;
-  --like-accent: #f2a93b;
+  --bg-color: #191916;
+  --bg-elevated: #24241f;
+  --text-color: #f4f0e7;
+  --text-muted: #b2aa9b;
+  --nav-border: #39372f;
+  --accent-color: #f2b34b;
+  --link-color: #f2b34b;
+  --comment-accent: #f2b34b;
+  --tip-accent: #f3bd60;
+  --like-accent: #f2b34b;
   --view-accent: #b0b6bf;
   --share-accent: #b0b6bf;
-  --watermark-opacity: 0.045;
+  --watermark-opacity: 0.055;
 }
 
 * {
@@ -42,11 +42,13 @@
 
 body {
   margin: 0;
+  min-width: 320px;
   background-color: var(--bg-color);
   color: var(--text-color);
   font-family: var(--font-body);
   transition: background-color 0.2s ease, color 0.2s ease;
   -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
 }
 
 h1, h2, h3, h4, strong, button, nav a {
@@ -83,6 +85,179 @@ textarea, input {
 
 .glass-surface {
   background: var(--bg-color);
+}
+
+.app-shell {
+  width: 100%;
+  max-width: 720px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  border-left: 1px solid var(--nav-border);
+  border-right: 1px solid var(--nav-border);
+  position: relative;
+  overflow-x: clip;
+}
+
+.app-header {
+  gap: 8px;
+  padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+}
+
+.app-content {
+  padding-bottom: calc(90px + env(safe-area-inset-bottom));
+  position: relative;
+  z-index: 1;
+}
+
+.header-brand-group,
+.brand-link {
+  display: flex;
+  align-items: center;
+}
+
+.header-brand-group {
+  min-width: 0;
+  gap: 10px;
+}
+
+.brand-link {
+  gap: 8px;
+  color: var(--text-color);
+  white-space: nowrap;
+}
+
+.brand-mark {
+  display: block;
+  width: 30px;
+  height: 30px;
+}
+
+.brand-name {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.server-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.server-status__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #c89a4b;
+}
+
+.server-status--online .server-status__dot {
+  background: #3a9b68;
+}
+
+.server-status--offline {
+  color: #c34c46;
+}
+
+.server-status--offline .server-status__dot {
+  background: #d34e48;
+}
+
+.feed-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 16px;
+  padding: 22px 20px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent-color) 28%, var(--nav-border));
+  border-radius: 18px;
+  background: var(--bg-elevated);
+  background:
+    radial-gradient(ellipse at 90% 10%, color-mix(in srgb, var(--accent-color) 15%, transparent), transparent 55%),
+    var(--bg-elevated);
+}
+
+.feed-hero__eyebrow {
+  color: var(--accent-color);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+}
+
+.feed-hero h1 {
+  margin: 7px 0 4px;
+  font-size: clamp(21px, 5vw, 27px);
+  letter-spacing: -0.8px;
+}
+
+.feed-hero p {
+  max-width: 420px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.feed-hero__link {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.feed-hero > img {
+  width: clamp(42px, 13vw, 74px);
+  height: auto;
+  flex: 0 0 auto;
+  opacity: 0.92;
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 3px;
+}
+
+@media (max-width: 380px) {
+  .app-header {
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  .header-brand-group {
+    gap: 7px;
+  }
+
+  .brand-name {
+    font-size: 16px;
+  }
+
+  .header-brand-group > button {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .wallet-connect-button {
+    padding: 6px 8px !important;
+    font-size: 12px !important;
+  }
+
+  .server-status {
+    font-size: 0;
+  }
+
+  .feed-hero {
+    margin: 12px;
+    padding: 18px 15px;
+  }
 }
 
 /* A single, faint, centered hexagon watermark — no repeat, no tiling */

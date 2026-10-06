@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getProfile, updateProfile, getStreaks, getFollowing, getFollowers, getFollowStatus, followUser, unfollowUser, getProfilePosts, getProfileLikes, getTipActivity, verifyTip, getBookmarks } from '../lib/api'
+import { getProfile, updateProfile, getStreaks, getFollowing, getFollowers, getFollowStatus, followUser, unfollowUser, getProfilePosts, getProfileLikes, getTipActivity, verifyTip, getBookmarks, deletePost } from '../lib/api'
 import { uploadMedia } from '../lib/upload'
 import Avatar from '../components/Avatar'
 import LoadingHexagon from '../components/LoadingHexagon'
@@ -115,9 +115,12 @@ function Profile() {
   const [following, setFollowing] = useState([])
   const [followers, setFollowers] = useState([])
   const [followingLoading, setFollowingLoading] = useState(true)
+  const [followingError, setFollowingError] = useState(null)
+  const [reloadKey, setReloadKey] = useState(0)
   const [peopleTab, setPeopleTab] = useState(null)
   const [isFollowing, setIsFollowing] = useState(false)
   const [followLoading, setFollowLoading] = useState(false)
+  const [followError, setFollowError] = useState(null)
   const [profileTab, setProfileTab] = useState('posts')
   const [tabData, setTabData] = useState({ posts: [], likes: [], tips: [], bookmarks: [], bookmarkCount: 0 })
   const [tabLoading, setTabLoading] = useState(true)
@@ -131,9 +134,38 @@ function Profile() {
   function ProfilePost({ post }) {
     const isLiked = Boolean(post.likedByMe)
     const isBookmarked = Boolean(post.bookmarkedByMe)
+    const [deleting, setDeleting] = useState(false)
+    const [deleteError, setDeleteError] = useState(null)
+    const canDelete = isOwnProfile && post.author?.wallet === user?.wallet && post.redPacket?.status !== 'active'
+
+    async function handleDelete(event) {
+      event.preventDefault()
+      event.stopPropagation()
+      if (!window.confirm('Delete this post? Comments, likes, and bookmarks will also be removed. Tip records will remain in Activity.')) return
+
+      setDeleting(true)
+      setDeleteError(null)
+      try {
+        await deletePost(post.id, token)
+        setTabData((current) => ({
+          ...current,
+          posts: current.posts.filter((item) => item.id !== post.id),
+          likes: current.likes.filter((item) => item.id !== post.id),
+          bookmarks: current.bookmarks.filter((item) => item.id !== post.id),
+          bookmarkCount: current.bookmarks.some((item) => item.id === post.id)
+            ? Math.max(0, current.bookmarkCount - 1)
+            : current.bookmarkCount,
+        }))
+      } catch (err) {
+        setDeleteError(err.message)
+      } finally {
+        setDeleting(false)
+      }
+    }
 
     return (
-      <Link to={`/post/${post.id}`} style={{ display: 'block', color: 'inherit', padding: '10px 0', borderBottom: '1px solid var(--nav-border)' }}>
+      <div style={{ position: 'relative', borderBottom: '1px solid var(--nav-border)' }}>
+      <Link to={`/post/${post.id}`} style={{ display: 'block', color: 'inherit', padding: '10px 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <Avatar url={post.author?.avatarUrl} fallback={post.author?.username || post.author?.wallet} size={40} />
           <div style={{ minWidth: 0 }}>
@@ -160,6 +192,19 @@ function Profile() {
           <span title="Bookmarks" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: isBookmarked ? 'var(--accent-color)' : 'var(--text-muted)', opacity: isBookmarked ? 1 : 0.8 }}><BookmarkIcon /> {post.bookmarkCount ?? 0}</span>
         </div>
       </Link>
+      {canDelete && (
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={deleting}
+          aria-label="Delete post"
+          style={{ position: 'absolute', top: 10, right: 0, border: '1px solid var(--nav-border)', borderRadius: 14, padding: '5px 9px', background: 'var(--bg-color)', color: 'var(--text-muted)', fontSize: 11 }}
+        >
+          {deleting ? 'Deleting...' : 'Delete'}
+        </button>
+      )}
+      {deleteError && <p role="alert" style={{ margin: '0 0 8px', color: '#e0245e', fontSize: 12 }}>{deleteError}</p>}
+      </div>
     )
   }
 
@@ -185,13 +230,19 @@ function Profile() {
       .catch((err) => console.error(err))
       .finally(() => setStreakLoading(false))
 
-    Promise.resolve().then(() => setFollowingLoading(true))
+    Promise.resolve().then(() => {
+      setFollowingLoading(true)
+      setFollowingError(null)
+    })
     Promise.all([getFollowing(targetWallet), getFollowers(targetWallet)])
       .then(([followingData, followersData]) => {
         setFollowing(followingData.users || [])
         setFollowers(followersData.users || [])
       })
-      .catch((err) => console.error(err))
+      .catch((err) => {
+        console.error(err)
+        setFollowingError(err.message)
+      })
       .finally(() => setFollowingLoading(false))
 
     if (isLoggedIn && !isOwnProfile) {
@@ -225,12 +276,12 @@ function Profile() {
       })
       .catch((err) => setError(err.message))
       .finally(() => setTabLoading(false))
-  }, [targetWallet, isOwnProfile, isLoggedIn, token])
+  }, [targetWallet, isOwnProfile, isLoggedIn, token, reloadKey])
 
   async function toggleFollow() {
     if (!isLoggedIn || !targetWallet || isOwnProfile) return
     setFollowLoading(true)
-    setError(null)
+    setFollowError(null)
     try {
       if (isFollowing) {
         await unfollowUser(targetWallet, token)
@@ -242,7 +293,7 @@ function Profile() {
         setFollowers((current) => current.some((person) => person.wallet === user.wallet) ? current : [...current, { wallet: user.wallet, username: user.username }])
       }
     } catch (err) {
-      setError(err.message)
+      setFollowError(err.message)
     } finally {
       setFollowLoading(false)
     }
@@ -356,6 +407,15 @@ function Profile() {
             </div>
           </div>
 
+          {followError && (
+            <p role="alert" style={{ margin: '10px 16px 0', color: '#e0245e', fontSize: 12 }}>
+              {followError}{' '}
+              <button type="button" onClick={toggleFollow} disabled={followLoading} style={{ border: 'none', background: 'transparent', color: 'var(--accent-color)', fontWeight: 700 }}>
+                Retry
+              </button>
+            </p>
+          )}
+
           <div style={{ padding: '16px 16px 0' }}>
             {bio && (
               <p style={{ color: 'var(--text-muted)', fontSize: 14, lineHeight: 1.6, maxWidth: 620, margin: '0 0 12px', whiteSpace: 'pre-wrap' }}>
@@ -383,7 +443,22 @@ function Profile() {
 
             {peopleTab && (
               <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {followingLoading ? <LoadingHexagon label={`Loading ${peopleTab}`} /> : (peopleTab === 'followers' ? followers : following).length === 0 ? (
+                {followingLoading ? <LoadingHexagon label={`Loading ${peopleTab}`} /> : followingError ? (
+                  <div role="alert" style={{ color: 'var(--text-muted)', fontSize: 13 }}>
+                    <p>{followingError}</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFollowingLoading(true)
+                        setFollowingError(null)
+                        setReloadKey((current) => current + 1)
+                      }}
+                      style={{ border: '1px solid var(--nav-border)', borderRadius: 16, padding: '6px 12px', background: 'var(--bg-elevated)', color: 'var(--text-color)' }}
+                    >
+                      Retry
+                    </button>
+                  </div>
+                ) : (peopleTab === 'followers' ? followers : following).length === 0 ? (
                   <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: 0 }}>No {peopleTab} yet.</p>
                 ) : (
                   (peopleTab === 'followers' ? followers : following).map((person) => (
@@ -547,6 +622,7 @@ function Profile() {
           <div style={{ textAlign: 'left' }}>
             {profileTab === 'activity' ? (
               <div>
+                {isOwnProfile && <p style={{ margin: '0 0 12px', color: 'var(--text-muted)', fontSize: 12 }}>Tips you send or receive appear here. New tips may take a little while to confirm.</p>}
                 {streakLoading ? <LoadingHexagon label="Loading activity" /> : <div style={{ display: 'flex', justifyContent: 'center', gap: 32, marginBottom: 18 }}><div><strong style={{ color: 'var(--accent-color)', fontSize: 22 }}>{streakData?.currentStreak || 0}</strong><div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Current streak</div></div><div><strong style={{ color: 'var(--accent-color)', fontSize: 22 }}>{streakData?.longestStreak || 0}</strong><div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Longest streak</div></div></div>}
                 {tabData.posts.filter((post) => post.redPacket).map((post) => <ProfilePost key={`red-packet-${post.id}`} post={post} />)}
                 {tabData.tips.length === 0 && !tabData.posts.some((post) => post.redPacket) ? <p style={{ color: 'var(--text-muted)' }}>No activity yet.</p> : tabData.tips.map((tip) => {

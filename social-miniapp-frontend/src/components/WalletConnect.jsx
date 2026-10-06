@@ -162,6 +162,7 @@ function WalletConnect() {
       <button
         onClick={handleConnect}
         disabled={status === 'connecting' || status === 'signing'}
+        className="wallet-connect-button"
         style={{
           ...pillStyle,
           border: '1px solid var(--accent-color)',
