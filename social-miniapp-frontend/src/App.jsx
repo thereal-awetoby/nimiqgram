@@ -7,6 +7,7 @@ import Notifications from './pages/Notifications'
 import Search from './pages/Search'
 import Post from './pages/Post'
 import WalletConnect from './components/WalletConnect'
+import ServerStatus from './components/ServerStatus'
 import BouncingHexagon from './BouncingHexagon'
 
 const NAV_ITEMS = [
@@ -87,7 +88,7 @@ function BottomNav() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-around',
-        padding: '10px 14px 12px',
+        padding: '10px max(14px, env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left))',
         borderTop: '1px solid var(--nav-border)',
         zIndex: 50,
       }}
@@ -128,17 +129,6 @@ function BottomNav() {
   )
 }
 
-function HexWatermark() {
-  return (
-    <svg viewBox="0 0 400 350" className="hex-watermark" aria-hidden="true">
-      <polygon
-        points="100,10 300,10 390,175 300,340 100,340 10,175"
-        fill="var(--accent-color)"
-      />
-    </svg>
-  )
-}
-
 function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light')
   const [isBooting, setIsBooting] = useState(true)
@@ -168,34 +158,30 @@ function App() {
   return (
     <BrowserRouter>
       <div
-        style={{
-          maxWidth: 720,
-          margin: '0 auto',
-          minHeight: '100vh',
-          borderLeft: '1px solid var(--nav-border)',
-          borderRight: '1px solid var(--nav-border)',
-          position: 'relative',
-        }}
+        className="app-shell"
       >
-        <HexWatermark />
-
         <header
-          className="glass-surface"
+          className="glass-surface app-header"
           style={{
             position: 'sticky',
             top: 0,
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            padding: '14px 16px',
             borderBottom: '1px solid var(--nav-border)',
             zIndex: 40,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="header-brand-group">
+            <Link to="/" className="brand-link" aria-label="Nimiqgram home">
+              <img src="/app-logo.svg" alt="" className="brand-mark" />
+              <span className="brand-name">Nimiqgram</span>
+            </Link>
+            <ServerStatus />
             <button
               onClick={toggleTheme}
               className="tap-scale"
+              aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
               style={{
                 background: 'var(--bg-elevated)',
                 border: '1px solid var(--nav-border)',
@@ -216,7 +202,7 @@ function App() {
           <WalletConnect />
         </header>
 
-        <div style={{ paddingBottom: 90, position: 'relative', zIndex: 1 }}>
+        <div className="app-content">
           <Routes>
             <Route path="/" element={<Feed />} />
             <Route path="/profile" element={<Profile />} />
