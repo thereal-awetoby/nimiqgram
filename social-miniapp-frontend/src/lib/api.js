@@ -54,7 +54,7 @@ async function request(path, options = {}) {
         ...requestOptions,
         signal: controller.signal,
         headers: {
-          'Content-Type': 'application/json',
+          ...(requestOptions.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
           ...(requestOptions.headers || {}),
         },
       })
