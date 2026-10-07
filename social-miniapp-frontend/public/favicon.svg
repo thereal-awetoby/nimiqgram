@@ -1,21 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-150 -130 300 260">
   <defs>
-    <linearGradient id="hex" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="hexIconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#fbc02d"/>
       <stop offset="100%" stop-color="#f39c12"/>
     </linearGradient>
-    <clipPath id="outer">
-      <path d="M 136 0 L 68 117.78 L -68 117.78 L -136 0 L -68 -117.78 L 68 -117.78 Z"/>
+    <clipPath id="hexIconGrad-clip">
+      <path d="M 128 -13.8564 Q 136 0 128 13.8564 L 76 103.923 Q 68 117.7795 52 117.7795 L -52 117.7795 Q -68 117.7795 -76 103.923 L -128 13.8564 Q -136 0 -128 -13.8564 L -76 -103.923 Q -68 -117.7795 -52 -117.7795 L 52 -117.7795 Q 68 -117.7795 76 -103.923 L 128 -13.8564 Z"/>
     </clipPath>
   </defs>
-  <path d="M 136 0 L 68 117.78 L -68 117.78 L -136 0 L -68 -117.78 L 68 -117.78 Z" fill="url(#hex)" stroke="#fddc85" stroke-width="3"/>
-  <g clip-path="url(#outer)" fill="none" stroke="#fddc85" stroke-width="2.5" opacity=".8">
-    <polygon points="54,0 27,46.77 -27,46.77 -54,0 -27,-46.77 27,-46.77"/>
-    <polygon points="54,-93.53 27,-46.77 -27,-46.77 -54,-93.53 -27,-140.3 27,-140.3"/>
-    <polygon points="54,93.53 27,140.3 -27,140.3 -54,93.53 -27,46.77 27,46.77"/>
-    <polygon points="135,-46.77 108,0 54,0 27,-46.77 54,-93.53 108,-93.53"/>
-    <polygon points="135,46.77 108,93.53 54,93.53 27,46.77 54,0 108,0"/>
-    <polygon points="-27,-46.77 -54,0 -108,0 -135,-46.77 -108,-93.53 -54,-93.53"/>
-    <polygon points="-27,46.77 -54,93.53 -108,93.53 -135,46.77 -108,0 -54,0"/>
+  <path d="M 128 -13.8564 Q 136 0 128 13.8564 L 76 103.923 Q 68 117.7795 52 117.7795 L -52 117.7795 Q -68 117.7795 -76 103.923 L -128 13.8564 Q -136 0 -128 -13.8564 L -76 -103.923 Q -68 -117.7795 -52 -117.7795 L 52 -117.7795 Q 68 -117.7795 76 -103.923 L 128 -13.8564 Z" fill="url(#hexIconGrad)" stroke="#fddc85" stroke-width="3"/>
+  <g clip-path="url(#hexIconGrad-clip)">
+    <polygon points="54,0 27,46.7654 -27,46.7654 -54,0 -27,-46.7654 27,-46.7654" fill="none" stroke="#fddc85" stroke-width="2.5" opacity=".8"/>
+    <polygon points="54,-93.5307 27,-46.7654 -27,-46.7654 -54,-93.5307 -27,-140.2961 27,-140.2961" fill="none" stroke="#fddc85" stroke-width="2.5" opacity=".8"/>
+    <polygon points="54,93.5307 27,140.2961 -27,140.2961 -54,93.5307 -27,46.7654 27,46.7654" fill="none" stroke="#fddc85" stroke-width="2.5" opacity=".8"/>
+    <polygon points="135,-46.7654 108,0 54,0 27,-46.7654 54,-93.5307 108,-93.5307" fill="none" stroke="#fddc85" stroke-width="2.5" opacity=".8"/>
+    <polygon points="135,46.7654 108,93.5307 54,93.5307 27,46.7654 54,0 108,0" fill="none" stroke="#fddc85" stroke-width="2.5" opacity=".8"/>
+    <polygon points="-27,-46.7654 -54,0 -108,0 -135,-46.7654 -108,-93.5307 -54,-93.5307" fill="none" stroke="#fddc85" stroke-width="2.5" opacity=".8"/>
+    <polygon points="-27,46.7654 -54,93.5307 -108,93.5307 -135,46.7654 -108,0 -54,0" fill="none" stroke="#fddc85" stroke-width="2.5" opacity=".8"/>
   </g>
 </svg>
