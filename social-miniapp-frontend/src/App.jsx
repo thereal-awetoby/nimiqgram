@@ -7,8 +7,7 @@ import Notifications from './pages/Notifications'
 import Search from './pages/Search'
 import Post from './pages/Post'
 import WalletConnect from './components/WalletConnect'
-import ServerStatus from './components/ServerStatus'
-import BouncingHexagon from './BouncingHexagon'
+import BouncingHexagon, { HexIcon } from './BouncingHexagon'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Feed', icon: 'home' },
@@ -174,10 +173,11 @@ function App() {
         >
           <div className="header-brand-group">
             <Link to="/" className="brand-link" aria-label="Nimiqgram home">
-              <img src="/app-logo.svg" alt="" className="brand-mark" />
+              <span className="brand-mark" aria-hidden="true">
+                <HexIcon size={30} />
+              </span>
               <span className="brand-name">Nimiqgram</span>
             </Link>
-            <ServerStatus />
             <button
               onClick={toggleTheme}
               className="tap-scale"

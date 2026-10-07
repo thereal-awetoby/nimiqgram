@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { searchApp } from '../lib/api'
+import { useAuth } from '../context/AuthContext'
 import Avatar from '../components/Avatar'
 import LoadingHexagon from '../components/LoadingHexagon'
+import PostOptionsMenu from '../components/PostOptionsMenu'
 
 function Search() {
+  const { user, token } = useAuth()
   const [query, setQuery] = useState('')
   const [activeTab, setActiveTab] = useState('people')
   const [results, setResults] = useState({ people: [], posts: [] })
@@ -112,9 +115,20 @@ function Search() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {posts.map((post) => (
             <div key={post.id} style={{ padding: 12, border: '1px solid var(--nav-border)', borderRadius: 12 }}>
-              <Link to={`/profile/${encodeURIComponent(post.author.wallet)}`} style={{ color: 'var(--accent-color)', fontSize: 12, fontWeight: 700 }}>
-                {post.author.displayName || post.author.username || post.author.wallet}
-              </Link>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <Link to={`/profile/${encodeURIComponent(post.author.wallet)}`} style={{ color: 'var(--accent-color)', fontSize: 12, fontWeight: 700 }}>
+                  {post.author.displayName || post.author.username || post.author.wallet}
+                </Link>
+                <PostOptionsMenu
+                  post={post}
+                  userWallet={user?.wallet}
+                  token={token}
+                  onDeleted={(deletedId) => setResults((current) => ({
+                    ...current,
+                    posts: (current.posts || []).filter((item) => item.id !== deletedId),
+                  }))}
+                />
+              </div>
               <p style={{ margin: '7px 0 0', lineHeight: 1.4 }}>{post.text}</p>
             </div>
           ))}

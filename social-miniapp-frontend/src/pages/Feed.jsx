@@ -12,6 +12,8 @@ import { formatPostDate } from '../lib/date'
 import { formatNimAmount } from '../lib/number'
 import { usePendingTips } from '../hooks/usePendingTips'
 import RedPacketModal from '../components/RedPacketModal'
+import PostOptionsMenu from '../components/PostOptionsMenu'
+import { isSameWalletAddress } from '../lib/walletAddress'
 
 const MAX_VIDEO_SECONDS = 5 * 60
 const URL_REGEX = /((?:https?:\/\/|www\.)[^\s]+|(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s]*)?)/gi
@@ -435,16 +437,6 @@ function Feed() {
 
   return (
     <div>
-      <section className="feed-hero" aria-labelledby="feed-hero-title">
-        <div>
-          <span className="feed-hero__eyebrow">THE NIMIQ COMMUNITY</span>
-          <h1 id="feed-hero-title">Social, with value.</h1>
-          <p>Share a thought, send a NIM tip, or pass a red packet around—right in the feed.</p>
-          <Link to="/leaderboard" className="feed-hero__link">See community rewards <span aria-hidden="true">→</span></Link>
-        </div>
-        <img src="/app-logo.svg" alt="" aria-hidden="true" />
-      </section>
-
       {isLoggedIn ? (
         <div style={{ padding: `14px ${PAGE_PADDING}px 10px`, borderBottom: '1px solid var(--nav-border)' }}>
           <div style={{ display: 'flex', gap: 10 }}>
@@ -597,11 +589,21 @@ function Feed() {
                   <Avatar url={post.author?.avatarUrl} fallback={post.author?.username || post.author?.wallet} />
                 </Link>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <Link onClick={(event) => event.stopPropagation()} to={`/profile/${encodeURIComponent(post.author?.wallet || '')}`} style={{ color: 'inherit' }}>
-                    <strong style={{ fontSize: 14.5 }}>{post.author?.displayName || post.author?.username || post.author?.wallet}</strong>
-                    {post.author?.username && <span style={{ color: 'var(--accent-color)', fontSize: 12, marginLeft: 6 }}>@{post.author.username}</span>}
-                  </Link>
-                  {formatPostDate(post.createdAt) && <time dateTime={post.createdAt} style={{ display: 'block', marginTop: 2, color: 'var(--text-muted)', fontSize: 11.5 }}>{formatPostDate(post.createdAt)}</time>}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <Link onClick={(event) => event.stopPropagation()} to={`/profile/${encodeURIComponent(post.author?.wallet || '')}`} style={{ color: 'inherit' }}>
+                        <strong style={{ fontSize: 14.5 }}>{post.author?.displayName || post.author?.username || post.author?.wallet}</strong>
+                        {post.author?.username && <span style={{ color: 'var(--accent-color)', fontSize: 12, marginLeft: 6 }}>@{post.author.username}</span>}
+                      </Link>
+                      {formatPostDate(post.createdAt) && <time dateTime={post.createdAt} style={{ display: 'block', marginTop: 2, color: 'var(--text-muted)', fontSize: 11.5 }}>{formatPostDate(post.createdAt)}</time>}
+                    </div>
+                    <PostOptionsMenu
+                      post={post}
+                      userWallet={user?.wallet}
+                      token={token}
+                      onDeleted={(deletedId) => setPosts((current) => current.filter((item) => item.id !== deletedId))}
+                    />
+                  </div>
                   <Link
                     to={`/post/${post.id}`}
                     style={{ display: 'block', color: 'inherit', padding: '8px 6px 12px', margin: '0 -6px' }}
@@ -658,7 +660,14 @@ function Feed() {
                     <ActionButton onClick={() => handleLike(post.id)} disabled={!isLoggedIn} active={isLiked} compact color="var(--like-accent)">
                       <HeartIcon filled={isLiked} /> {post.likeCount ?? 0}
                     </ActionButton>
-                    <ActionButton onClick={() => setTippingPost(post)} disabled={!isLoggedIn} compact color="var(--tip-accent)">
+                    <ActionButton
+                      onClick={() => {
+                        if (!isSameWalletAddress(post.author?.wallet, user?.wallet)) setTippingPost(post)
+                      }}
+                      disabled={!isLoggedIn || isSameWalletAddress(post.author?.wallet, user?.wallet)}
+                      compact
+                      color="var(--tip-accent)"
+                    >
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', minWidth: 0 }}>
                         <span style={{ display: 'inline-flex', flexShrink: 0 }}><TipIcon /></span>
                         <span>{formatNimAmount(post.tipTotal)}</span>
@@ -714,7 +723,7 @@ function Feed() {
         })
       )}
 
-      {tippingPost && (
+      {tippingPost && !isSameWalletAddress(tippingPost.author?.wallet, user?.wallet) && (
         <TipModal
           post={tippingPost}
           onClose={() => { setTippingPost(null); setActiveTipId(null) }}

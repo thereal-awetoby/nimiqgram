@@ -3,15 +3,11 @@ import initCore, { Transaction } from '@nimiq/core/web'
 import { useAuth } from '../context/AuthContext'
 import { sendTip } from '../lib/api'
 import { sendWalletTransaction } from '../lib/walletTransaction'
+import { isSameWalletAddress, normalizeWalletAddress } from '../lib/walletAddress'
 
 function normalizeHexString(value) {
   if (typeof value !== 'string') return ''
   return value.trim().replace(/^0x/i, '').replace(/\s+/g, '').toLowerCase()
-}
-
-function normalizeWalletAddress(value) {
-  if (typeof value !== 'string') return ''
-  return value.replace(/\s+/g, '').toLowerCase()
 }
 
 function requireTransactionHash(value) {
@@ -101,6 +97,9 @@ function TipModal({ post, onClose, onSuccess, onPending, verificationStatus }) {
   const [status, setStatus] = useState('idle') // idle | sending | pending | success | error
   const [error, setError] = useState(null)
   const visibleStatus = verificationStatus === 'verified' && status === 'pending' ? 'success' : status
+  const isSelfTip = isSameWalletAddress(post.author?.wallet, user?.wallet)
+
+  if (isSelfTip) return null
 
   async function handleSendTip() {
     setStatus('sending')

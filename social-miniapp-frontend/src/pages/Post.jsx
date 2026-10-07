@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { addComment, getPost, getBookmarkStatus, bookmarkPost, removeBookmark, toggleLike, recordPostView, claimRedPacket } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import Avatar from '../components/Avatar'
@@ -10,6 +10,8 @@ import { formatPostDate } from '../lib/date'
 import { formatNimAmount } from '../lib/number'
 import VideoPreview from '../components/VideoPreview'
 import { usePendingTips } from '../hooks/usePendingTips'
+import { isSameWalletAddress } from '../lib/walletAddress'
+import PostOptionsMenu from '../components/PostOptionsMenu'
 
 function HeartIcon({ filled }) {
   return (
@@ -121,6 +123,7 @@ function renderTextWithLinks(text) {
 
 function Post() {
   const { postId } = useParams()
+  const navigate = useNavigate()
   const { token, isLoggedIn, user } = useAuth()
   const [post, setPost] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -250,14 +253,22 @@ function Post() {
       </Link>
 
       <article style={{ marginTop: 18, paddingBottom: 20, borderBottom: '1px solid var(--nav-border)' }}>
-        <Link to={`/profile/${encodeURIComponent(post.author?.wallet || '')}`} style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'inherit' }}>
-          <Avatar url={post.author?.avatarUrl} fallback={post.author?.username || post.author?.wallet} />
-          <div>
-            <strong>{post.author?.displayName || post.author?.username || post.author?.wallet}</strong>
-            {post.author?.username && <div style={{ color: 'var(--accent-color)', fontSize: 12 }}>@{post.author.username}</div>}
-            {formatPostDate(post.createdAt) && <time dateTime={post.createdAt} style={{ display: 'block', marginTop: 2, color: 'var(--text-muted)', fontSize: 11.5 }}>{formatPostDate(post.createdAt)}</time>}
-          </div>
-        </Link>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+          <Link to={`/profile/${encodeURIComponent(post.author?.wallet || '')}`} style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'inherit' }}>
+            <Avatar url={post.author?.avatarUrl} fallback={post.author?.username || post.author?.wallet} />
+            <div>
+              <strong>{post.author?.displayName || post.author?.username || post.author?.wallet}</strong>
+              {post.author?.username && <div style={{ color: 'var(--accent-color)', fontSize: 12 }}>@{post.author.username}</div>}
+              {formatPostDate(post.createdAt) && <time dateTime={post.createdAt} style={{ display: 'block', marginTop: 2, color: 'var(--text-muted)', fontSize: 11.5 }}>{formatPostDate(post.createdAt)}</time>}
+            </div>
+          </Link>
+          <PostOptionsMenu
+            post={post}
+            userWallet={user?.wallet}
+            token={token}
+            onDeleted={() => navigate('/')}
+          />
+        </div>
 
         <div style={{ margin: '18px 0 12px', fontSize: 17, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{renderTextWithLinks(post.text || '')}</div>
         {post.mediaUrl && post.mediaType === 'video' && <VideoPreview src={post.mediaUrl} style={{ width: '100%', maxHeight: 480, borderRadius: 12 }} />}
@@ -297,7 +308,13 @@ function Post() {
           <ActionButton onClick={handleLike} disabled={!isLoggedIn} active={liked} color="var(--like-accent)">
             <HeartIcon filled={liked} /> {post.likeCount ?? 0}
           </ActionButton>
-          <ActionButton onClick={() => setTippingPost(post)} disabled={!isLoggedIn} color="var(--tip-accent)">
+          <ActionButton
+            onClick={() => {
+              if (!isSameWalletAddress(post.author?.wallet, user?.wallet)) setTippingPost(post)
+            }}
+            disabled={!isLoggedIn || isSameWalletAddress(post.author?.wallet, user?.wallet)}
+            color="var(--tip-accent)"
+          >
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', minWidth: 0 }}>
               <span style={{ display: 'inline-flex', flexShrink: 0 }}><TipIcon /></span>
               <span>{formatNimAmount(post.tipTotal)}</span>
@@ -341,7 +358,7 @@ function Post() {
         )}
       </section>
 
-      {tippingPost && (
+      {tippingPost && !isSameWalletAddress(tippingPost.author?.wallet, user?.wallet) && (
         <TipModal
           post={tippingPost}
           onClose={() => { setTippingPost(null); setActiveTipId(null) }}

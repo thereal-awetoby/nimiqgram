@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getProfile, updateProfile, getStreaks, getFollowing, getFollowers, getFollowStatus, followUser, unfollowUser, getProfilePosts, getProfileLikes, getTipActivity, verifyTip, getBookmarks, deletePost } from '../lib/api'
+import { getProfile, updateProfile, getStreaks, getFollowing, getFollowers, getFollowStatus, followUser, unfollowUser, getProfilePosts, getProfileLikes, getTipActivity, verifyTip, getBookmarks } from '../lib/api'
 import { uploadMedia } from '../lib/upload'
 import Avatar from '../components/Avatar'
 import LoadingHexagon from '../components/LoadingHexagon'
 import { formatPostDate } from '../lib/date'
 import { formatNimAmount } from '../lib/number'
 import VideoPreview from '../components/VideoPreview'
+import PostOptionsMenu from '../components/PostOptionsMenu'
 
 function HeartIcon() {
   return (
@@ -134,38 +135,9 @@ function Profile() {
   function ProfilePost({ post }) {
     const isLiked = Boolean(post.likedByMe)
     const isBookmarked = Boolean(post.bookmarkedByMe)
-    const [deleting, setDeleting] = useState(false)
-    const [deleteError, setDeleteError] = useState(null)
-    const canDelete = isOwnProfile && post.author?.wallet === user?.wallet && post.redPacket?.status !== 'active'
-
-    async function handleDelete(event) {
-      event.preventDefault()
-      event.stopPropagation()
-      if (!window.confirm('Delete this post? Comments, likes, and bookmarks will also be removed. Tip records will remain in Activity.')) return
-
-      setDeleting(true)
-      setDeleteError(null)
-      try {
-        await deletePost(post.id, token)
-        setTabData((current) => ({
-          ...current,
-          posts: current.posts.filter((item) => item.id !== post.id),
-          likes: current.likes.filter((item) => item.id !== post.id),
-          bookmarks: current.bookmarks.filter((item) => item.id !== post.id),
-          bookmarkCount: current.bookmarks.some((item) => item.id === post.id)
-            ? Math.max(0, current.bookmarkCount - 1)
-            : current.bookmarkCount,
-        }))
-      } catch (err) {
-        setDeleteError(err.message)
-      } finally {
-        setDeleting(false)
-      }
-    }
-
     return (
       <div style={{ position: 'relative', borderBottom: '1px solid var(--nav-border)' }}>
-      <Link to={`/post/${post.id}`} style={{ display: 'block', color: 'inherit', padding: '10px 0' }}>
+      <Link to={`/post/${post.id}`} style={{ display: 'block', color: 'inherit', padding: '10px 40px 10px 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <Avatar url={post.author?.avatarUrl} fallback={post.author?.username || post.author?.wallet} size={40} />
           <div style={{ minWidth: 0 }}>
@@ -192,18 +164,22 @@ function Profile() {
           <span title="Bookmarks" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minWidth: 38, flex: 1, color: isBookmarked ? 'var(--accent-color)' : 'var(--text-muted)', opacity: isBookmarked ? 1 : 0.8 }}><BookmarkIcon /> {post.bookmarkCount ?? 0}</span>
         </div>
       </Link>
-      {canDelete && (
-        <button
-          type="button"
-          onClick={handleDelete}
-          disabled={deleting}
-          aria-label="Delete post"
-          style={{ position: 'absolute', top: 10, right: 0, border: '1px solid var(--nav-border)', borderRadius: 14, padding: '5px 9px', background: 'var(--bg-color)', color: 'var(--text-muted)', fontSize: 11 }}
-        >
-          {deleting ? 'Deleting...' : 'Delete'}
-        </button>
-      )}
-      {deleteError && <p role="alert" style={{ margin: '0 0 8px', color: '#e0245e', fontSize: 12 }}>{deleteError}</p>}
+      <div style={{ position: 'absolute', top: 10, right: 0 }}>
+        <PostOptionsMenu
+          post={post}
+          userWallet={isOwnProfile ? user?.wallet : null}
+          token={token}
+          onDeleted={(deletedId) => setTabData((current) => ({
+            ...current,
+            posts: current.posts.filter((item) => item.id !== deletedId),
+            likes: current.likes.filter((item) => item.id !== deletedId),
+            bookmarks: current.bookmarks.filter((item) => item.id !== deletedId),
+            bookmarkCount: current.bookmarks.some((item) => item.id === deletedId)
+              ? Math.max(0, current.bookmarkCount - 1)
+              : current.bookmarkCount,
+          }))}
+        />
+      </div>
       </div>
     )
   }

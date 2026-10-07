@@ -129,6 +129,7 @@ textarea, input {
 
 .brand-mark {
   display: block;
+  flex: 0 0 30px;
   width: 30px;
   height: 30px;
 }
@@ -138,86 +139,6 @@ textarea, input {
   font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.5px;
-}
-
-.server-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--text-muted);
-  font-size: 10px;
-  white-space: nowrap;
-}
-
-.server-status__dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #c89a4b;
-}
-
-.server-status--online .server-status__dot {
-  background: #3a9b68;
-}
-
-.server-status--offline {
-  color: #c34c46;
-}
-
-.server-status--offline .server-status__dot {
-  background: #d34e48;
-}
-
-.feed-hero {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  margin: 16px;
-  padding: 22px 20px;
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--accent-color) 28%, var(--nav-border));
-  border-radius: 18px;
-  background: var(--bg-elevated);
-  background:
-    radial-gradient(ellipse at 90% 10%, color-mix(in srgb, var(--accent-color) 15%, transparent), transparent 55%),
-    var(--bg-elevated);
-}
-
-.feed-hero__eyebrow {
-  color: var(--accent-color);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1.2px;
-}
-
-.feed-hero h1 {
-  margin: 7px 0 4px;
-  font-size: clamp(21px, 5vw, 27px);
-  letter-spacing: -0.8px;
-}
-
-.feed-hero p {
-  max-width: 420px;
-  margin: 0;
-  color: var(--text-muted);
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-.feed-hero__link {
-  display: inline-block;
-  margin-top: 12px;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.feed-hero > img {
-  width: clamp(42px, 13vw, 74px);
-  height: auto;
-  flex: 0 0 auto;
-  opacity: 0.92;
 }
 
 button:focus-visible,
@@ -250,14 +171,6 @@ a:focus-visible {
     font-size: 12px !important;
   }
 
-  .server-status {
-    font-size: 0;
-  }
-
-  .feed-hero {
-    margin: 12px;
-    padding: 18px 15px;
-  }
 }
 
 /* A single, faint, centered hexagon watermark — no repeat, no tiling */
